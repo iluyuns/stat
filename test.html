@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>统计脚本测试页面</title>
+</head>
+<body>
+    <h1>统计脚本测试页面</h1>
+    <p>这个页面用于测试统计脚本是否正常工作。</p>
+    <p>请打开浏览器开发者工具查看网络请求和控制台输出。</p>
+    <a href="https://iuu.pub/static/alibaba/">1688产业带代言人</a>
+    <button onclick="testEvent()">测试事件上报</button>
+    
+    <!-- 动态脚本（推荐方式） -->
+    <script src="http://127.0.0.1:8080/api/script/stat.js?site_id=zhCYjE0lG2nI&api_url=http%3A%2F%2F127.0.0.1%3A8080" site-id="zhCYjE0lG2nI" data-api-url="http://127.0.0.1:8080" async></script>    <script>
+        function testEvent() {
+            if (window.statReportEvent) {
+                window.statReportEvent('button_click', 'test_button', {page: 'test.html'});
+                alert('事件已上报！');
+            } else {
+                alert('统计脚本未加载！');
+            }
+        }
+        
+        // 页面加载完成后检查脚本状态
+        window.addEventListener('load', function() {
+            console.log('页面加载完成');
+            if (window.statReportEvent) {
+                console.log('统计脚本加载成功');
+            } else {
+                console.error('统计脚本加载失败');
+            }
+        });
+    </script>
+</body>
+</html> 

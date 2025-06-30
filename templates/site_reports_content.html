@@ -1,0 +1,460 @@
+{{define "site_reports_content"}}
+<!-- 时间范围选择 -->
+<div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold text-gray-900">数据报表</h2>
+        <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-2">
+                <label class="text-sm font-medium text-gray-700">时间范围:</label>
+                <select id="timeRange" class="border border-gray-300 rounded-md px-3 py-1 text-sm">
+                    <option value="7">最近7天</option>
+                    <option value="30">最近30天</option>
+                    <option value="90">最近90天</option>
+                    <option value="365">最近一年</option>
+                </select>
+            </div>
+            <button onclick="generateReport()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                <i class="fas fa-download mr-2"></i>导出报表
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 核心指标卡片 -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-blue-100">
+                <i class="fas fa-eye text-blue-600 text-xl"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">总PV</p>
+                <p class="text-2xl font-bold text-gray-900" id="total-pv">-</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-green-100">
+                <i class="fas fa-users text-green-600 text-xl"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">总UV</p>
+                <p class="text-2xl font-bold text-gray-900" id="total-uv">-</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-purple-100">
+                <i class="fas fa-clock text-purple-600 text-xl"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">平均停留</p>
+                <p class="text-2xl font-bold text-gray-900" id="avg-duration">-</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-orange-100">
+                <i class="fas fa-file-alt text-orange-600 text-xl"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">页面数量</p>
+                <p class="text-2xl font-bold text-gray-900" id="page-count">-</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 图表区域 -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- PV/UV趋势图 -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">PV/UV趋势</h3>
+        <div id="trendChart" style="height: 300px;"></div>
+    </div>
+
+    <!-- 访问时段分布 -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">访问时段分布</h3>
+        <div id="hourChart" style="height: 300px;"></div>
+    </div>
+</div>
+
+<!-- 详细统计表格 -->
+<div class="bg-white rounded-lg shadow-sm p-6">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">每日详细数据</h3>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">日期</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PV</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UV</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">平均停留</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">跳出率</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">新用户</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200" id="daily-stats">
+                <tr>
+                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">加载中...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let trendChart, hourChart;
+    const siteId = '{{.SiteId}}';
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        loadReportData();
+        initCharts();
+        
+        // 绑定时间范围变化事件
+        document.getElementById('timeRange').addEventListener('change', function() {
+            loadReportData();
+        });
+    });
+
+    // 加载报表数据
+    function loadReportData() {
+        const days = document.getElementById('timeRange').value;
+        
+        // 加载核心指标
+        loadCoreMetrics(days);
+        
+        // 加载趋势数据
+        loadTrendData(days);
+        
+        // 加载时段分布
+        loadHourDistribution(days);
+        
+        // 加载每日详细数据
+        loadDailyStats(days);
+    }
+
+    // 加载核心指标
+    function loadCoreMetrics(days) {
+        fetch(`/api/stat/report-metrics?site_id=${siteId}&days=${days}`, {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('total-pv').textContent = data.data.total_pv || 0;
+                document.getElementById('total-uv').textContent = data.data.total_uv || 0;
+                document.getElementById('avg-duration').textContent = data.data.avg_duration || 0;
+                document.getElementById('page-count').textContent = data.data.page_count || 0;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    // 加载趋势数据
+    function loadTrendData(days) {
+        fetch(`/api/stat/report-trend?site_id=${siteId}&days=${days}`, {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateTrendChart(data.data);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    // 加载时段分布
+    function loadHourDistribution(days) {
+        fetch(`/api/stat/report-hour-distribution?site_id=${siteId}&days=${days}`, {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateHourChart(data.data);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    // 加载每日详细数据
+    function loadDailyStats(days) {
+        fetch(`/api/stat/report-daily-stats?site_id=${siteId}&days=${days}`, {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateDailyStatsTable(data.data);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    // 初始化图表
+    function initCharts() {
+        // 初始化趋势图
+        const trendDom = document.getElementById('trendChart');
+        trendChart = echarts.init(trendDom);
+
+        // 初始化时段分布图
+        const hourDom = document.getElementById('hourChart');
+        hourChart = echarts.init(hourDom);
+
+        // 响应式处理
+        window.addEventListener('resize', function() {
+            if (trendChart) trendChart.resize();
+            if (hourChart) hourChart.resize();
+        });
+    }
+
+    // 更新趋势图
+    function updateTrendChart(data) {
+        if (!trendChart) return;
+
+        // 对数据进行时间顺序排序（从旧到新）
+        const sortedData = sortTrendDataByDate(data);
+
+        const option = {
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'cross'
+                }
+            },
+            legend: {
+                data: ['PV', 'UV']
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                boundaryGap: false,
+                data: sortedData.dates || []
+            },
+            yAxis: [
+                {
+                    type: 'value',
+                    name: 'PV',
+                    position: 'left'
+                },
+                {
+                    type: 'value',
+                    name: 'UV',
+                    position: 'right'
+                }
+            ],
+            series: [
+                {
+                    name: 'PV',
+                    type: 'line',
+                    data: sortedData.pv || [],
+                    itemStyle: { color: '#3B82F6' },
+                    lineStyle: { width: 3 }
+                },
+                {
+                    name: 'UV',
+                    type: 'line',
+                    yAxisIndex: 1,
+                    data: sortedData.uv || [],
+                    itemStyle: { color: '#10B981' },
+                    lineStyle: { width: 3 }
+                }
+            ]
+        };
+
+        trendChart.setOption(option);
+    }
+
+    // 对趋势数据按日期排序（从旧到新）
+    function sortTrendDataByDate(data) {
+        if (!data.dates || !data.pv || !data.uv) {
+            return data;
+        }
+
+        // 创建日期和数据的配对数组
+        const pairs = data.dates.map((date, index) => ({
+            date: date,
+            pv: data.pv[index] || 0,
+            uv: data.uv[index] || 0
+        }));
+
+        // 按日期排序（从旧到新）
+        pairs.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        // 重新组织数据
+        return {
+            dates: pairs.map(pair => pair.date),
+            pv: pairs.map(pair => pair.pv),
+            uv: pairs.map(pair => pair.uv)
+        };
+    }
+
+    // 更新时段分布图
+    function updateHourChart(data) {
+        if (!hourChart) return;
+
+        const option = {
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'shadow'
+                }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: data.hours || []
+            },
+            yAxis: {
+                type: 'value'
+            },
+            series: [
+                {
+                    name: '访问量',
+                    type: 'bar',
+                    data: data.counts || [],
+                    itemStyle: { color: '#8B5CF6' }
+                }
+            ]
+        };
+
+        hourChart.setOption(option);
+    }
+
+    // 更新每日详细数据表格
+    function updateDailyStatsTable(data) {
+        const tbody = document.getElementById('daily-stats');
+        
+        if (data && data.length > 0) {
+            tbody.innerHTML = data.map(function(item) {
+                return '<tr>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + item.date + '</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + item.pv + '</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + item.uv + '</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + item.avg_duration + '</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + item.bounce_rate + '%</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + item.new_users + '</td>' +
+                '</tr>';
+            }).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">暂无数据</td></tr>';
+        }
+    }
+
+    // 生成报表
+    function generateReport() {
+        const days = document.getElementById('timeRange').value;
+        const siteName = '{{.SiteName}}';
+        
+        // 创建报表数据
+        const reportData = {
+            site_name: siteName,
+            site_id: siteId,
+            time_range: days + '天',
+            generated_at: new Date().toLocaleString('zh-CN'),
+            data: {}
+        };
+
+        // 获取所有数据并生成报表
+        Promise.all([
+            fetch(`/api/stat/report-metrics?site_id=${siteId}&days=${days}`, {
+                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+            }).then(r => r.json()),
+            fetch(`/api/stat/report-trend?site_id=${siteId}&days=${days}`, {
+                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+            }).then(r => r.json()),
+            fetch(`/api/stat/report-daily-stats?site_id=${siteId}&days=${days}`, {
+                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+            }).then(r => r.json())
+        ]).then(([metrics, trend, daily]) => {
+            reportData.data = {
+                metrics: metrics.data,
+                trend: trend.data,
+                daily: daily.data
+            };
+
+            // 生成CSV文件
+            generateCSV(reportData);
+        }).catch(error => {
+            console.error('Error generating report:', error);
+            showNotification('生成报表失败', 'error');
+        });
+    }
+
+    // 生成CSV文件
+    function generateCSV(reportData) {
+        const siteName = reportData.site_name;
+        const timeRange = reportData.time_range;
+        
+        // 创建CSV内容
+        let csv = `站点数据报表\n`;
+        csv += `站点名称: ${siteName}\n`;
+        csv += `时间范围: ${timeRange}\n`;
+        csv += `生成时间: ${reportData.generated_at}\n\n`;
+        
+        // 核心指标
+        csv += `核心指标\n`;
+        csv += `总PV,总UV,平均停留时长(分钟),页面数量\n`;
+        csv += `${reportData.data.metrics.total_pv || 0},${reportData.data.metrics.total_uv || 0},${reportData.data.metrics.avg_duration || 0},${reportData.data.metrics.page_count || 0}\n\n`;
+        
+        // 每日详细数据
+        csv += `每日详细数据\n`;
+        csv += `日期,PV,UV,平均停留时长(分钟),跳出率(%),新用户\n`;
+        
+        if (reportData.data.daily && reportData.data.daily.length > 0) {
+            reportData.data.daily.forEach(item => {
+                csv += `${item.date},${item.pv},${item.uv},${item.avg_duration},${item.bounce_rate},${item.new_users}\n`;
+            });
+        }
+        
+        // 下载文件
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `${siteName}_数据报表_${timeRange}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showNotification('报表导出成功', 'success');
+    }
+</script>
+{{end}} 

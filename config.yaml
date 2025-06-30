@@ -1,0 +1,55 @@
+# 统计服务配置文件
+
+# 服务器配置
+server:
+  port: 8080
+  mode: debug  # debug, release
+  cors:
+    allowed_origins: ["*"]
+    allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allowed_headers: ["Origin", "Content-Type", "Authorization"]
+    allow_credentials: true
+
+# 数据库配置
+database:
+  # MySQL 配置（用于站点管理）
+  mysql:
+    dsn: "root:password@tcp(localhost:3306)/stat?charset=utf8mb4&parseTime=True&loc=Local"
+    max_idle_conns: 10
+    max_open_conns: 100
+    conn_max_lifetime: 3600
+  
+  # ClickHouse 配置（用于统计数据）
+  clickhouse:
+    dsn: "clickhouse://default:@localhost:9000/stat?dial_timeout=10s&read_timeout=20s"
+    max_idle_conns: 5
+    max_open_conns: 50
+    conn_max_lifetime: 3600
+
+# GeoIP 配置
+geoip:
+  db_path: "./IP2LOCATION-LITE-DB11.BIN"
+
+# 日志配置
+log:
+  level: info  # debug, info, warn, error
+  file: "./logs/stat.log"
+  max_size: 100    # MB
+  max_backups: 3
+  max_age: 28      # days
+
+# 安全配置
+security:
+  jwt_secret: "your-jwt-secret-key"
+  token_expire_hours: 168  # 7天
+  password_min_length: 6
+  password_max_length: 20
+
+# 统计配置
+statistics:
+  # 数据保留天数
+  data_retention_days: 90
+  # 批量处理大小
+  batch_size: 1000
+  # 实时数据刷新间隔（秒）
+  realtime_refresh_interval: 30 

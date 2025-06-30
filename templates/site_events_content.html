@@ -1,0 +1,663 @@
+{{define "site_events_content"}}
+<!-- 
+    事件分析页面模板
+    
+    功能说明：
+    1. 显示事件统计数据（总事件数、触发用户、事件类型、平均频率）
+    2. 展示事件趋势图表和事件类型分布
+    3. 热门事件排行和详细事件列表
+    4. 支持时间范围和事件类型筛选
+    
+    数据来源：
+    - /api/stat/events/stats - 事件统计数据
+    - /api/stat/events/trend - 事件趋势数据
+    - /api/stat/events/category-distribution - 事件类型分布
+    - /api/stat/events/popular - 热门事件
+    - /api/stat/events/list - 事件列表
+    
+    筛选功能：
+    - 时间范围：最近7天、30天、90天
+    - 事件类型：点击事件、滚动事件、表单事件等
+    
+    作者：统计系统
+    版本：1.0
+-->
+
+<!-- 时间范围选择 -->
+<div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold text-gray-900">事件分析</h2>
+        <div class="flex items-center space-x-4">
+            <!-- 时间范围筛选 -->
+            <div class="flex items-center space-x-2">
+                <label class="text-sm font-medium text-gray-700">时间范围:</label>
+                <select id="timeRange" class="border border-gray-300 rounded-md px-3 py-1 text-sm">
+                    <option value="7">最近7天</option>
+                    <option value="30">最近30天</option>
+                    <option value="90">最近90天</option>
+                </select>
+            </div>
+            <!-- 事件类型筛选 -->
+            <div class="flex items-center space-x-2">
+                <label class="text-sm font-medium text-gray-700">事件类型:</label>
+                <select id="eventType" class="border border-gray-300 rounded-md px-3 py-1 text-sm">
+                    <option value="">全部事件</option>
+                    <option value="点击事件">点击事件</option>
+                    <option value="滚动事件">滚动事件</option>
+                    <option value="表单事件">表单事件</option>
+                    <option value="页面事件">页面事件</option>
+                    <option value="用户交互">用户交互</option>
+                    <option value="自定义事件">自定义事件</option>
+                    <option value="其他事件">其他事件</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 事件统计卡片 -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <!-- 总事件数统计 -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-blue-100">
+                <i class="fas fa-chart-line text-blue-600 text-xl"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">总事件数</p>
+                <p class="text-2xl font-bold text-gray-900" id="total-events">-</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 触发用户数统计 -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-green-100">
+                <i class="fas fa-users text-green-600 text-xl"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">触发用户</p>
+                <p class="text-2xl font-bold text-gray-900" id="unique-users">-</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 事件类型数统计 -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-purple-100">
+                <i class="fas fa-tags text-purple-600 text-xl"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">事件类型</p>
+                <p class="text-2xl font-bold text-gray-900" id="event-types">-</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 平均频率统计 -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-orange-100">
+                <i class="fas fa-clock text-orange-600 text-xl"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">平均频率</p>
+                <p class="text-2xl font-bold text-gray-900" id="avg-frequency">-</p>
+            </div>
+        </div>
+        <div class="mt-4">
+            <span class="text-sm text-gray-500">次/用户</span>
+        </div>
+    </div>
+</div>
+
+<!-- 图表区域 -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- 事件趋势图 -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">事件趋势</h3>
+        <div id="eventTrendChart" style="height: 300px;"></div>
+    </div>
+
+    <!-- 事件类型分布饼图 -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">事件类型分布</h3>
+        <div id="eventTypeChart" style="height: 300px;"></div>
+    </div>
+</div>
+
+<!-- 热门事件排行 -->
+<div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">热门事件</h3>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">事件名称</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">事件类型</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">触发次数</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">触发用户</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">平均频率</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200" id="popular-events">
+                <tr>
+                    <td colspan="5" class="px-6 py-4 text-center text-gray-500">加载中...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 事件详细列表 -->
+<div class="bg-white rounded-lg shadow-sm p-6">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold text-gray-900">事件列表</h3>
+        <!-- 搜索功能 -->
+        <div class="flex items-center space-x-2">
+            <input type="text" id="searchEvent" placeholder="搜索事件..." class="border border-gray-300 rounded-md px-3 py-1 text-sm">
+            <button onclick="loadEventList()" class="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 text-sm">
+                搜索
+            </button>
+        </div>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">时间</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">事件名称</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">事件类型</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">页面</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用户</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">详情</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200" id="event-list">
+                <tr>
+                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">加载中...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <!-- 分页控件 -->
+    <div class="mt-4 flex items-center justify-between">
+        <div class="text-sm text-gray-700">
+            显示 <span id="start-index">1</span> - <span id="end-index">10</span> 条，共 <span id="total-count">0</span> 条
+        </div>
+        <div class="flex items-center space-x-2">
+            <button onclick="prevPage()" class="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50 text-sm">上一页</button>
+            <span class="text-sm text-gray-700">第 <span id="current-page">1</span> 页</span>
+            <button onclick="nextPage()" class="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50 text-sm">下一页</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 图表实例和分页变量
+    let eventTrendChart, eventTypeChart;
+    let currentPage = 1;
+    let pageSize = 20;
+    const siteId = '{{.SiteId}}';
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        // 先初始化图表，再加载数据（避免时序问题）
+        setTimeout(function() {
+            initCharts();
+            
+            // 图表初始化完成后再加载数据
+            loadEventData();
+        }, 200);
+        
+        // 绑定筛选条件变化事件
+        document.getElementById('timeRange').addEventListener('change', function() {
+            loadEventData();
+        });
+        
+        document.getElementById('eventType').addEventListener('change', function() {
+            loadEventData();
+        });
+    });
+
+    // 加载事件数据（包含统计、趋势、分布、热门事件）
+    function loadEventData() {
+        const days = document.getElementById('timeRange').value;
+        const eventType = document.getElementById('eventType').value;
+        
+        // 加载事件统计
+        loadEventStats(days, eventType);
+        
+        // 加载事件趋势
+        loadEventTrend(days, eventType);
+        
+        // 加载事件类型分布
+        loadEventTypeDistribution(days, eventType);
+        
+        // 加载热门事件
+        loadPopularEvents(days, eventType);
+        
+        // 加载事件列表
+        loadEventList();
+    }
+
+    // 加载事件统计
+    function loadEventStats(days, eventType) {
+        const params = new URLSearchParams({
+            site_id: siteId,
+            days: days
+        });
+        if (eventType) params.append('event_type', eventType);
+        
+        fetch(`/api/stat/event-stats?${params}`, {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('total-events').textContent = data.data.total_events || 0;
+                document.getElementById('unique-users').textContent = data.data.unique_users || 0;
+                document.getElementById('event-types').textContent = data.data.event_types || 0;
+                // 格式化平均频率，保留两位小数
+                const avgFreq = data.data.avg_frequency || 0;
+                document.getElementById('avg-frequency').textContent = avgFreq.toFixed(2);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    // 加载事件趋势
+    function loadEventTrend(days, eventType) {
+        const params = new URLSearchParams({
+            site_id: siteId,
+            days: days
+        });
+        if (eventType) params.append('event_type', eventType);
+        
+        fetch(`/api/stat/event-trend?${params}`, {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateEventTrendChart(data.data);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    // 加载事件类型分布
+    function loadEventTypeDistribution(days, eventType) {
+        const params = new URLSearchParams({
+            site_id: siteId,
+            days: days
+        });
+        if (eventType) params.append('event_type', eventType);
+        
+        fetch(`/api/stat/event-category-distribution?${params}`, {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateEventTypeChart(data.data);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    // 加载热门事件
+    function loadPopularEvents(days, eventType) {
+        const params = new URLSearchParams({
+            site_id: siteId,
+            days: days,
+            limit: 10
+        });
+        if (eventType) params.append('event_type', eventType);
+        
+        fetch(`/api/stat/popular-events?${params}`, {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updatePopularEventsTable(data.data);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    // 加载事件列表
+    function loadEventList() {
+        const days = document.getElementById('timeRange').value;
+        const eventType = document.getElementById('eventType').value;
+        const search = document.getElementById('searchEvent').value;
+        
+        const params = new URLSearchParams({
+            site_id: siteId,
+            days: days,
+            page: currentPage,
+            limit: pageSize
+        });
+        
+        // 根据事件类型分类进行筛选
+        if (eventType) {
+            const eventTypeFilter = getEventTypeFilter(eventType);
+            if (eventTypeFilter) {
+                params.append('event_type_filter', eventTypeFilter);
+            }
+        }
+        
+        if (search) params.append('search', search);
+        
+        fetch(`/api/stat/events?${params}`, {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateEventListTable(data.data.events, data.data.total);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    // 根据事件类型分类获取筛选条件
+    function getEventTypeFilter(eventType) {
+        const filters = {
+            'click': ['click', 'tap', 'button'],
+            'scroll': ['scroll'],
+            'form': ['form', 'submit', 'input'],
+            'page': ['page', 'view', 'load'],
+            'user': ['user', 'interaction', 'action'],
+            'custom': ['custom', 'custom_'],
+            'other': [] // 其他类型不设置特定筛选条件
+        };
+        
+        return filters[eventType] ? filters[eventType].join('|') : null;
+    }
+
+    // 初始化图表
+    function initCharts() {
+        console.log('Initializing event charts...');
+        
+        // 初始化事件趋势图
+        const trendDom = document.getElementById('eventTrendChart');
+        if (!trendDom) {
+            console.error('eventTrendChart container not found');
+            return;
+        }
+        eventTrendChart = echarts.init(trendDom);
+        console.log('Event trend chart initialized');
+
+        // 初始化事件类型分布图
+        const typeDom = document.getElementById('eventTypeChart');
+        if (!typeDom) {
+            console.error('eventTypeChart container not found');
+            return;
+        }
+        eventTypeChart = echarts.init(typeDom);
+        console.log('Event type chart initialized');
+
+        // 响应式处理
+        window.addEventListener('resize', function() {
+            if (eventTrendChart) eventTrendChart.resize();
+            if (eventTypeChart) eventTypeChart.resize();
+        });
+    }
+
+    // 更新事件趋势图
+    function updateEventTrendChart(data) {
+        console.log('updateEventTrendChart called with data:', data);
+        if (!eventTrendChart) {
+            console.error('eventTrendChart not initialized');
+            return;
+        }
+
+        // 处理数据格式：API返回的是数组，需要转换为图表需要的格式
+        const dates = data.map(item => item.date);
+        const counts = data.map(item => item.count);
+
+        console.log('Processed trend data - dates:', dates, 'counts:', counts);
+
+        const option = {
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'cross'
+                }
+            },
+            legend: {
+                data: ['事件数量']
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                boundaryGap: false,
+                data: dates
+            },
+            yAxis: {
+                type: 'value'
+            },
+            series: [
+                {
+                    name: '事件数量',
+                    type: 'line',
+                    data: counts,
+                    itemStyle: { color: '#3B82F6' },
+                    lineStyle: { width: 3 },
+                    areaStyle: {
+                        color: {
+                            type: 'linear',
+                            x: 0, y: 0, x2: 0, y2: 1,
+                            colorStops: [
+                                { offset: 0, color: 'rgba(59, 130, 246, 0.3)' },
+                                { offset: 1, color: 'rgba(59, 130, 246, 0.1)' }
+                            ]
+                        }
+                    }
+                }
+            ]
+        };
+
+        eventTrendChart.setOption(option);
+        console.log('Event trend chart updated');
+    }
+
+    // 更新事件类型分布图
+    function updateEventTypeChart(data) {
+        console.log('updateEventTypeChart called with data:', data);
+        if (!eventTypeChart) {
+            console.error('eventTypeChart not initialized');
+            return;
+        }
+
+        // 直接使用API返回的分类数据
+        const chartData = data.map(item => ({
+            name: item.event_category || '未知',
+            value: item.count
+        }));
+
+        console.log('Processed type distribution data:', chartData);
+
+        const option = {
+            tooltip: {
+                trigger: 'item',
+                formatter: '{a} <br/>{b}: {c} ({d}%)'
+            },
+            legend: {
+                orient: 'vertical',
+                left: 'left',
+                data: data.map(item => item.event_category || '未知')
+            },
+            series: [
+                {
+                    name: '事件类型',
+                    type: 'pie',
+                    radius: '50%',
+                    data: chartData,
+                    emphasis: {
+                        itemStyle: {
+                            shadowBlur: 10,
+                            shadowOffsetX: 0,
+                            shadowColor: 'rgba(0, 0, 0, 0.5)'
+                        }
+                    }
+                }
+            ]
+        };
+
+        eventTypeChart.setOption(option);
+        console.log('Event type chart updated');
+    }
+
+    // 更新热门事件表格
+    function updatePopularEventsTable(data) {
+        const tbody = document.getElementById('popular-events');
+        
+        if (data && data.length > 0) {
+            tbody.innerHTML = data.map(function(item) {
+                return '<tr>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + item.event_name + '</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + (item.event_category || getEventType(item.event_name)) + '</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + item.count + '</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + item.unique_users + '</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + item.avg_frequency + '</td>' +
+                '</tr>';
+            }).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">暂无数据</td></tr>';
+        }
+    }
+
+    // 更新事件列表表格
+    function updateEventListTable(events, total) {
+        const tbody = document.getElementById('event-list');
+        
+        if (events && events.length > 0) {
+            tbody.innerHTML = events.map(function(item) {
+                return '<tr>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + formatTime(item.created_at) + '</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + item.event_name + '</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + (item.event_category || getEventType(item.event_name)) + '</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + (item.path || '-') + '</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + (item.user_id || '-') + '</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + 
+                        '<button onclick="showEventDetail(\'' + item.id + '\')" class="text-blue-600 hover:text-blue-800">查看</button>' +
+                    '</td>' +
+                '</tr>';
+            }).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">暂无数据</td></tr>';
+        }
+
+        // 更新分页信息
+        updatePagination(total);
+    }
+
+    // 更新分页信息
+    function updatePagination(total) {
+        const startIndex = (currentPage - 1) * pageSize + 1;
+        const endIndex = Math.min(currentPage * pageSize, total);
+        
+        document.getElementById('start-index').textContent = startIndex;
+        document.getElementById('end-index').textContent = endIndex;
+        document.getElementById('total-count').textContent = total;
+        document.getElementById('current-page').textContent = currentPage;
+    }
+
+    // 上一页
+    function prevPage() {
+        if (currentPage > 1) {
+            currentPage--;
+            loadEventList();
+        }
+    }
+
+    // 下一页
+    function nextPage() {
+        currentPage++;
+        loadEventList();
+    }
+
+    // 显示事件详情
+    function showEventDetail(eventId) {
+        // 这里可以实现弹窗显示事件详情
+        alert('事件详情功能开发中...');
+    }
+
+    // 格式化时间
+    function formatTime(timeStr) {
+        if (!timeStr) return '-';
+        const date = new Date(timeStr);
+        return date.toLocaleString('zh-CN');
+    }
+
+    // 根据事件名称推断事件类型
+    function getEventType(eventName) {
+        if (!eventName) return '未知';
+        
+        const name = eventName.toLowerCase();
+        
+        // 点击相关事件
+        if (name.includes('click') || name.includes('tap') || name.includes('button')) {
+            return '点击事件';
+        }
+        
+        // 滚动相关事件
+        if (name.includes('scroll')) {
+            return '滚动事件';
+        }
+        
+        // 表单相关事件
+        if (name.includes('form') || name.includes('submit') || name.includes('input')) {
+            return '表单事件';
+        }
+        
+        // 页面相关事件
+        if (name.includes('page') || name.includes('view') || name.includes('load')) {
+            return '页面事件';
+        }
+        
+        // 用户交互事件
+        if (name.includes('user') || name.includes('interaction') || name.includes('action')) {
+            return '用户交互';
+        }
+        
+        // 自定义事件
+        if (name.includes('custom') || name.includes('custom_')) {
+            return '自定义事件';
+        }
+        
+        // 默认分类
+        return '其他事件';
+    }
+</script>
+{{end}} 

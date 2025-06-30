@@ -1,0 +1,776 @@
+{{define "dashboard_content"}}
+<div class="space-y-6">
+    <!-- 页面标题 -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">仪表盘</h1>
+            <p class="text-gray-600">实时数据概览</p>
+        </div>
+        <div class="flex space-x-3">
+            <button onclick="refreshData()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                <i class="fas fa-sync-alt mr-2"></i>刷新
+            </button>
+        </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-white rounded-lg shadow-sm p-6 card-hover">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-blue-100">
+                    <i class="fas fa-eye text-blue-600 text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">今日PV</p>
+                    <p class="text-2xl font-bold text-gray-900" id="today-pv">-</p>
+                </div>
+            </div>
+            <div class="mt-4">
+                <span class="text-sm text-green-600" id="pv-trend">
+                    <i class="fas fa-arrow-up mr-1"></i>0%
+                </span>
+                <span class="text-sm text-gray-500 ml-2">较昨日</span>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm p-6 card-hover">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-green-100">
+                    <i class="fas fa-users text-green-600 text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">今日UV</p>
+                    <p class="text-2xl font-bold text-gray-900" id="today-uv">-</p>
+                </div>
+            </div>
+            <div class="mt-4">
+                <span class="text-sm text-green-600" id="uv-trend">
+                    <i class="fas fa-arrow-up mr-1"></i>0%
+                </span>
+                <span class="text-sm text-gray-500 ml-2">较昨日</span>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm p-6 card-hover">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-purple-100">
+                    <i class="fas fa-clock text-purple-600 text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">平均停留</p>
+                    <p class="text-2xl font-bold text-gray-900" id="avg-duration">-</p>
+                </div>
+            </div>
+            <div class="mt-4">
+                <span class="text-sm text-gray-500">分钟</span>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm p-6 card-hover">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-orange-100">
+                    <i class="fas fa-globe text-orange-600 text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">活跃站点</p>
+                    <p class="text-2xl font-bold text-gray-900" id="active-sites">-</p>
+                </div>
+            </div>
+            <div class="mt-4">
+                <span class="text-sm text-gray-500">个站点</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 图表区域 -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- PV趋势图 -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">PV趋势</h3>
+            <div id="pvChart" style="height: 300px; width: 100%; min-width: 0; overflow: hidden;"></div>
+        </div>
+
+        <!-- 热门页面 -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">热门页面</h3>
+            <div class="space-y-3" id="popular-pages">
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center">
+                        <div class="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                        <span class="text-sm text-gray-700">加载中...</span>
+                    </div>
+                    <span class="text-sm font-medium text-gray-900">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 分布统计图表 -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <!-- 设备分布 -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">设备分布</h3>
+            <div id="deviceChart" style="height: 250px;"></div>
+        </div>
+
+        <!-- 地区分布 -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">地区分布</h3>
+            <div id="regionChart" style="height: 250px;"></div>
+        </div>
+
+        <!-- 浏览器分布 -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">浏览器分布</h3>
+            <div id="browserChart" style="height: 250px;"></div>
+        </div>
+    </div>
+
+    <!-- 详细统计表格 -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- 访问来源统计 -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">访问来源统计</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">来源</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">访问量</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">占比</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="referrer-stats">
+                        <tr>
+                            <td colspan="3" class="px-4 py-4 text-center text-gray-500">加载中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 网络类型统计 -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">网络类型统计</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">网络类型</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">访问量</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">占比</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="network-stats">
+                        <tr>
+                            <td colspan="3" class="px-4 py-4 text-center text-gray-500">加载中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 实时数据 -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">实时访问</h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">时间</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">页面</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP地址</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">地区</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">设备</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200" id="realtime-data">
+                    <tr>
+                        <td colspan="5" class="px-6 py-4 text-center text-gray-500">暂无实时数据</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<script>
+    let pvChart, deviceChart, regionChart, browserChart;
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        loadDashboardData();
+        loadPopularPages();
+        loadRealtimeData();
+        loadDistributionData();
+        
+        // 延迟初始化图表，确保容器完全渲染
+        setTimeout(function() {
+            initPVChart();
+            initDeviceChart();
+            initRegionChart();
+            initBrowserChart();
+        }, 200);
+        
+        // 每30秒刷新一次数据
+        setInterval(loadDashboardData, 30000);
+        setInterval(loadRealtimeData, 10000);
+        setInterval(loadDistributionData, 60000);
+    });
+
+    // 加载仪表盘数据
+    function loadDashboardData() {
+        fetch('/api/stat/dashboard', {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateStats(data.data);
+            } else {
+                showNotification(data.message || '加载数据失败', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('网络错误', 'error');
+        });
+    }
+
+    // 更新统计数据
+    function updateStats(data) {
+        document.getElementById('today-pv').textContent = data.today_pv || 0;
+        document.getElementById('today-uv').textContent = data.today_uv || 0;
+        document.getElementById('avg-duration').textContent = data.avg_duration || 0;
+        document.getElementById('active-sites').textContent = data.active_sites || 0;
+        
+        // 更新趋势
+        updateTrend('pv-trend', data.pv_trend);
+        updateTrend('uv-trend', data.uv_trend);
+        
+        // 更新PV趋势图
+        if (data.pv_trend_data && data.pv_trend_data.length > 0) {
+            updatePVChart(data.pv_trend_data);
+        }
+    }
+
+    // 更新趋势显示
+    function updateTrend(elementId, trend) {
+        const element = document.getElementById(elementId);
+        if (trend > 0) {
+            element.innerHTML = '<i class="fas fa-arrow-up mr-1"></i>' + trend + '%';
+            element.className = 'text-sm text-green-600';
+        } else if (trend < 0) {
+            element.innerHTML = '<i class="fas fa-arrow-down mr-1"></i>' + Math.abs(trend) + '%';
+            element.className = 'text-sm text-red-600';
+        } else {
+            element.innerHTML = '<i class="fas fa-minus mr-1"></i>0%';
+            element.className = 'text-sm text-gray-600';
+        }
+    }
+
+    // 初始化PV趋势图
+    function initPVChart() {
+        const chartDom = document.getElementById('pvChart');
+        pvChart = echarts.init(chartDom);
+
+        const option = {
+            title: {
+                text: 'PV趋势',
+                left: 'center',
+                textStyle: {
+                    fontSize: 16,
+                    fontWeight: 'normal'
+                }
+            },
+            tooltip: {
+                trigger: 'axis',
+                formatter: function(params) {
+                    return params[0].name + '<br/>' + 
+                           params[0].seriesName + ': ' + params[0].value;
+                }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                boundaryGap: false,
+                data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+                axisLabel: {
+                    rotate: 45
+                }
+            },
+            yAxis: {
+                type: 'value',
+                minInterval: 1
+            },
+            series: [{
+                name: 'PV',
+                type: 'line',
+                smooth: true,
+                data: [0, 0, 0, 0, 0, 0, 0],
+                itemStyle: {
+                    color: '#3B82F6'
+                },
+                areaStyle: {
+                    color: {
+                        type: 'linear',
+                        x: 0,
+                        y: 0,
+                        x2: 0,
+                        y2: 1,
+                        colorStops: [{
+                            offset: 0, color: 'rgba(59, 130, 246, 0.3)'
+                        }, {
+                            offset: 1, color: 'rgba(59, 130, 246, 0.1)'
+                        }]
+                    }
+                },
+                lineStyle: {
+                    width: 3
+                }
+            }]
+        };
+
+        pvChart.setOption(option);
+        
+        // 响应式处理
+        window.addEventListener('resize', function() {
+            if (pvChart) {
+                pvChart.resize();
+            }
+        });
+        
+        // 延迟调整大小，确保容器已完全渲染
+        setTimeout(function() {
+            if (pvChart) {
+                pvChart.resize();
+            }
+        }, 300);
+    }
+
+    // 更新PV趋势图
+    function updatePVChart(trendData) {
+        if (!pvChart) {
+            initPVChart();
+        }
+
+        const labels = trendData.map(item => item.date);
+        const data = trendData.map(item => item.count);
+
+        const option = {
+            title: {
+                text: 'PV趋势',
+                left: 'center',
+                textStyle: {
+                    fontSize: 16,
+                    fontWeight: 'normal'
+                }
+            },
+            tooltip: {
+                trigger: 'axis',
+                formatter: function(params) {
+                    return params[0].name + '<br/>' + 
+                           params[0].seriesName + ': ' + params[0].value;
+                }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                boundaryGap: false,
+                data: labels,
+                axisLabel: {
+                    rotate: 45
+                }
+            },
+            yAxis: {
+                type: 'value',
+                minInterval: 1
+            },
+            series: [{
+                name: 'PV',
+                type: 'line',
+                smooth: true,
+                data: data,
+                itemStyle: {
+                    color: '#3B82F6'
+                },
+                areaStyle: {
+                    color: {
+                        type: 'linear',
+                        x: 0,
+                        y: 0,
+                        x2: 0,
+                        y2: 1,
+                        colorStops: [{
+                            offset: 0, color: 'rgba(59, 130, 246, 0.3)'
+                        }, {
+                            offset: 1, color: 'rgba(59, 130, 246, 0.1)'
+                        }]
+                    }
+                },
+                lineStyle: {
+                    width: 3
+                }
+            }]
+        };
+
+        pvChart.setOption(option);
+    }
+
+    // 加载热门页面
+    function loadPopularPages() {
+        fetch('/api/stat/popular-pages', {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updatePopularPages(data.data);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    // 更新热门页面
+    function updatePopularPages(pages) {
+        const container = document.getElementById('popular-pages');
+        if (pages && pages.length > 0) {
+            container.innerHTML = pages.map(function(page, index) {
+                const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-red-500'];
+                return '<div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">' +
+                    '<div class="flex items-center">' +
+                        '<div class="w-2 h-2 ' + colors[index % colors.length] + ' rounded-full mr-3"></div>' +
+                        '<span class="text-sm text-gray-700">' + (page.path || page.url || '未知页面') + '</span>' +
+                    '</div>' +
+                    '<span class="text-sm font-medium text-gray-900">' + (page.count || 0) + '</span>' +
+                '</div>';
+            }).join('');
+        } else {
+            container.innerHTML = '<div class="text-center text-gray-500 py-4">暂无数据</div>';
+        }
+    }
+
+    // 简化设备信息
+    function simplifyDevice(ua) {
+        if (!ua) return '-';
+        
+        // 检测移动设备
+        if (ua.includes('Mobile') || ua.includes('iPhone') || ua.includes('Android')) {
+            if (ua.includes('iPhone')) return 'iPhone';
+            if (ua.includes('iPad')) return 'iPad';
+            if (ua.includes('Android')) return 'Android';
+            return 'Mobile';
+        }
+        
+        // 检测桌面浏览器
+        if (ua.includes('Chrome')) return 'Chrome';
+        if (ua.includes('Firefox')) return 'Firefox';
+        if (ua.includes('Safari') && !ua.includes('Chrome')) return 'Safari';
+        if (ua.includes('Edge')) return 'Edge';
+        if (ua.includes('Opera')) return 'Opera';
+        
+        return 'Desktop';
+    }
+
+    // 加载实时数据
+    function loadRealtimeData() {
+        fetch('/api/stat/realtime', {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateRealtimeData(data.data);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    // 更新实时数据
+    function updateRealtimeData(data) {
+        const tbody = document.getElementById('realtime-data');
+        if (data && data.length > 0) {
+            tbody.innerHTML = data.map(function(item) {
+                return '<tr>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + formatTime(item.created_at) + '</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + (item.path || '-') + '</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' + (item.ip || '-') + '</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' + (item.location || '-') + '</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' + simplifyDevice(item.device) + '</td>' +
+                '</tr>';
+            }).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">暂无实时数据</td></tr>';
+        }
+    }
+
+    // 刷新数据
+    function refreshData() {
+        loadDashboardData();
+        loadPopularPages();
+        loadRealtimeData();
+        showNotification('数据已刷新', 'success');
+    }
+
+    // 格式化时间
+    function formatTime(timeString) {
+        const date = new Date(timeString);
+        return date.toLocaleString('zh-CN', {
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    }
+
+    // 加载分布数据
+    function loadDistributionData() {
+        fetch('/api/stat/distribution', {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateDeviceChart(data.data.device_distribution);
+                updateRegionChart(data.data.region_distribution);
+                updateBrowserChart(data.data.browser_distribution);
+                updateReferrerStats(data.data.referrer_distribution);
+                updateNetworkStats(data.data.network_distribution);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    // 初始化设备分布图
+    function initDeviceChart() {
+        const chartDom = document.getElementById('deviceChart');
+        deviceChart = echarts.init(chartDom);
+        
+        const colors = [
+            '#3B82F6', '#10B981', '#F59E0B', '#EF4444', 
+            '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'
+        ];
+        
+        const option = {
+            tooltip: {
+                trigger: 'item',
+                formatter: '{a} <br/>{b}: {c} ({d}%)'
+            },
+            color: colors,
+            series: [{
+                name: '设备类型',
+                type: 'pie',
+                radius: ['40%', '70%'],
+                center: ['50%', '50%'],
+                data: [],
+                emphasis: {
+                    itemStyle: {
+                        shadowBlur: 10,
+                        shadowOffsetX: 0,
+                        shadowColor: 'rgba(0, 0, 0, 0.5)'
+                    }
+                }
+            }]
+        };
+        
+        deviceChart.setOption(option);
+        
+        window.addEventListener('resize', function() {
+            if (deviceChart) {
+                deviceChart.resize();
+            }
+        });
+    }
+
+    // 更新设备分布图
+    function updateDeviceChart(data) {
+        if (!deviceChart) return;
+        
+        const chartData = data.map(item => ({
+            name: item.device || '未知',
+            value: item.count
+        }));
+        
+        deviceChart.setOption({
+            series: [{
+                data: chartData
+            }]
+        });
+    }
+
+    // 初始化地区分布图
+    function initRegionChart() {
+        const chartDom = document.getElementById('regionChart');
+        regionChart = echarts.init(chartDom);
+        
+        const colors = [
+            '#3B82F6', '#10B981', '#F59E0B', '#EF4444', 
+            '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'
+        ];
+        
+        const option = {
+            tooltip: {
+                trigger: 'item',
+                formatter: '{a} <br/>{b}: {c} ({d}%)'
+            },
+            color: colors,
+            series: [{
+                name: '地区',
+                type: 'pie',
+                radius: ['40%', '70%'],
+                center: ['50%', '50%'],
+                data: [],
+                emphasis: {
+                    itemStyle: {
+                        shadowBlur: 10,
+                        shadowOffsetX: 0,
+                        shadowColor: 'rgba(0, 0, 0, 0.5)'
+                    }
+                }
+            }]
+        };
+        
+        regionChart.setOption(option);
+        
+        window.addEventListener('resize', function() {
+            if (regionChart) {
+                regionChart.resize();
+            }
+        });
+    }
+
+    // 更新地区分布图
+    function updateRegionChart(data) {
+        if (!regionChart) return;
+        
+        const chartData = data.map(item => ({
+            name: item.province || '未知',
+            value: item.count
+        }));
+        
+        regionChart.setOption({
+            series: [{
+                data: chartData
+            }]
+        });
+    }
+
+    // 初始化浏览器分布图
+    function initBrowserChart() {
+        const chartDom = document.getElementById('browserChart');
+        browserChart = echarts.init(chartDom);
+        
+        const colors = [
+            '#3B82F6', '#10B981', '#F59E0B', '#EF4444', 
+            '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'
+        ];
+        
+        const option = {
+            tooltip: {
+                trigger: 'item',
+                formatter: '{a} <br/>{b}: {c} ({d}%)'
+            },
+            color: colors,
+            series: [{
+                name: '浏览器',
+                type: 'pie',
+                radius: ['40%', '70%'],
+                center: ['50%', '50%'],
+                data: [],
+                emphasis: {
+                    itemStyle: {
+                        shadowBlur: 10,
+                        shadowOffsetX: 0,
+                        shadowColor: 'rgba(0, 0, 0, 0.5)'
+                    }
+                }
+            }]
+        };
+        
+        browserChart.setOption(option);
+        
+        window.addEventListener('resize', function() {
+            if (browserChart) {
+                browserChart.resize();
+            }
+        });
+    }
+
+    // 更新浏览器分布图
+    function updateBrowserChart(data) {
+        if (!browserChart) return;
+        
+        const chartData = data.map(item => ({
+            name: item.browser || '未知',
+            value: item.count
+        }));
+        
+        browserChart.setOption({
+            series: [{
+                data: chartData
+            }]
+        });
+    }
+
+    // 更新访问来源统计
+    function updateReferrerStats(data) {
+        const tbody = document.getElementById('referrer-stats');
+        if (data && data.length > 0) {
+            const total = data.reduce((sum, item) => sum + item.count, 0);
+            tbody.innerHTML = data.map(function(item) {
+                const percent = ((item.count / total) * 100).toFixed(1);
+                return '<tr>' +
+                    '<td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">' + (item.referer || '直接访问') + '</td>' +
+                    '<td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">' + item.count + '</td>' +
+                    '<td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">' + percent + '%</td>' +
+                '</tr>';
+            }).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="3" class="px-4 py-4 text-center text-gray-500">暂无数据</td></tr>';
+        }
+    }
+
+    // 更新网络类型统计
+    function updateNetworkStats(data) {
+        const tbody = document.getElementById('network-stats');
+        if (data && data.length > 0) {
+            const total = data.reduce((sum, item) => sum + item.count, 0);
+            tbody.innerHTML = data.map(function(item) {
+                const percent = ((item.count / total) * 100).toFixed(1);
+                return '<tr>' +
+                    '<td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">' + (item.net || '未知') + '</td>' +
+                    '<td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">' + item.count + '</td>' +
+                    '<td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">' + percent + '%</td>' +
+                '</tr>';
+            }).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="3" class="px-4 py-4 text-center text-gray-500">暂无数据</td></tr>';
+        }
+    }
+</script>
+{{end}} 

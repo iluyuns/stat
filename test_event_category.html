@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>事件类型分类测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .event-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .event-info > div {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 3px;
+        }
+    </style>
+    <script src="http://127.0.0.1:8080/api/script/stat.js?site_id=zhCYjE0lG2nI&api_url=http%3A%2F%2Flocalhost%3A8080" site-id="zhCYjE0lG2nI" data-api-url="http://localhost:8080" async></script>
+</head>
+<body>
+    <h1>事件类型分类测试</h1>
+    
+    <div class="test-section">
+        <h2>事件类型分类说明</h2>
+        <p>现在事件上报会包含以下字段：</p>
+        <ul>
+            <li><strong>event_name</strong>: 事件名称（如 'button_click'）</li>
+            <li><strong>event_category</strong>: 事件类型分类（如 '点击事件'）</li>
+            <li><strong>value</strong>: 事件值（如 'submit_button'）</li>
+            <li><strong>extra</strong>: 额外信息（JSON格式）</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>测试不同类型的事件</h2>
+        <button onclick="testClickEvent()">测试点击事件</button>
+        <button onclick="testFormEvent()">测试表单事件</button>
+        <button onclick="testScrollEvent()">测试滚动事件</button>
+        <button onclick="testPageEvent()">测试页面事件</button>
+        <button onclick="testCustomEvent()">测试自定义事件</button>
+        <button onclick="testUserEvent()">测试用户交互</button>
+        <div class="log" id="event-log">事件日志将显示在这里...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>事件数据结构</h2>
+        <div class="event-info">
+            <div>
+                <strong>事件名称 (event_name)</strong><br>
+                具体的事件标识符，如：<br>
+                • button_click<br>
+                • form_submit<br>
+                • page_view<br>
+                • custom_action
+            </div>
+            <div>
+                <strong>事件类型 (event_category)</strong><br>
+                事件的分类，如：<br>
+                • 点击事件<br>
+                • 表单事件<br>
+                • 页面事件<br>
+                • 自定义事件
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入统计脚本 -->
+    <script src="/api/script/stat.js?site_id=test123&api_url=http://localhost:8080" site-id="test123" data-api-url="http://localhost:8080"></script>
+
+    <script>
+        // 测试点击事件
+        function testClickEvent() {
+            if (window.statReportEvent) {
+                window.statReportEvent('button_click', 'test_button', {
+                    button_id: 'test-btn',
+                    page: window.location.pathname
+                });
+                logEvent('点击事件已上报', 'button_click', '点击事件', 'test_button');
+            } else {
+                logEvent('错误：statReportEvent 函数未定义');
+            }
+        }
+
+        // 测试表单事件
+        function testFormEvent() {
+            if (window.statReportEvent) {
+                window.statReportEvent('form_submit', 'contact_form', {
+                    form_id: 'contact-form',
+                    form_type: 'contact'
+                });
+                logEvent('表单事件已上报', 'form_submit', '表单事件', 'contact_form');
+            } else {
+                logEvent('错误：statReportEvent 函数未定义');
+            }
+        }
+
+        // 测试滚动事件
+        function testScrollEvent() {
+            if (window.statReportEvent) {
+                window.statReportEvent('page_scroll', 'scroll_to_bottom', {
+                    scroll_percentage: 100,
+                    scroll_direction: 'down'
+                });
+                logEvent('滚动事件已上报', 'page_scroll', '滚动事件', 'scroll_to_bottom');
+            } else {
+                logEvent('错误：statReportEvent 函数未定义');
+            }
+        }
+
+        // 测试页面事件
+        function testPageEvent() {
+            if (window.statReportEvent) {
+                window.statReportEvent('page_view', 'homepage', {
+                    page_title: '首页',
+                    referrer: document.referrer
+                });
+                logEvent('页面事件已上报', 'page_view', '页面事件', 'homepage');
+            } else {
+                logEvent('错误：statReportEvent 函数未定义');
+            }
+        }
+
+        // 测试自定义事件
+        function testCustomEvent() {
+            if (window.statReportEvent) {
+                window.statReportEvent('custom_action', 'user_defined', {
+                    action_type: 'business',
+                    user_goal: 'conversion'
+                });
+                logEvent('自定义事件已上报', 'custom_action', '自定义事件', 'user_defined');
+            } else {
+                logEvent('错误：statReportEvent 函数未定义');
+            }
+        }
+
+        // 测试用户交互事件
+        function testUserEvent() {
+            if (window.statReportEvent) {
+                window.statReportEvent('user_interaction', 'hover_menu', {
+                    element: 'navigation',
+                    duration: 2000
+                });
+                logEvent('用户交互事件已上报', 'user_interaction', '用户交互', 'hover_menu');
+            } else {
+                logEvent('错误：statReportEvent 函数未定义');
+            }
+        }
+
+        // 记录事件日志
+        function logEvent(message, eventName, category, value) {
+            const log = document.getElementById('event-log');
+            const time = new Date().toLocaleTimeString();
+            
+            if (eventName && category && value) {
+                log.innerHTML += `[${time}] ${message}<br>` +
+                    `&nbsp;&nbsp;事件名称: ${eventName}<br>` +
+                    `&nbsp;&nbsp;事件类型: ${category}<br>` +
+                    `&nbsp;&nbsp;事件值: ${value}<br><br>`;
+            } else {
+                log.innerHTML += `[${time}] ${message}<br>`;
+            }
+            
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // 页面加载完成后检查脚本状态
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                if (window.statReportEvent) {
+                    logEvent('统计脚本加载成功，事件类型分类功能已启用');
+                } else {
+                    logEvent('错误：统计脚本加载失败');
+                }
+            }, 2000);
+        });
+    </script>
+</body>
+</html> 

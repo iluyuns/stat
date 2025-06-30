@@ -1,0 +1,399 @@
+{{define "site_settings_content"}}
+<!-- 站点基本信息 -->
+<div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+    <h2 class="text-xl font-semibold text-gray-900 mb-6">站点基本信息</h2>
+    <form id="siteInfoForm" class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">站点名称</label>
+                <input type="text" id="siteName" name="site_name" value="{{.SiteName}}" 
+                       class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">站点域名</label>
+                <input type="text" id="siteDomain" name="site_domain" value="{{.SiteDomain}}" 
+                       class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">站点描述</label>
+            <textarea id="siteDescription" name="site_description" rows="3" 
+                      class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">{{.SiteDescription}}</textarea>
+        </div>
+        <div class="flex items-center justify-end">
+            <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700">
+                保存设置
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- 跟踪代码管理 -->
+<div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+    <h2 class="text-xl font-semibold text-gray-900 mb-6">跟踪代码</h2>
+    
+    <!-- 跟踪代码预览 -->
+    <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-2">跟踪代码 (复制到您的网站)</label>
+        <div class="relative">
+            <textarea id="trackingCode" rows="8" readonly 
+                      class="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-50 font-mono text-sm"></textarea>
+            <button onclick="copyTrackingCode()" class="absolute top-2 right-2 bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
+                复制代码
+            </button>
+        </div>
+    </div>
+
+    <!-- 跟踪设置 -->
+    <div class="space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-lg font-medium text-gray-900">跟踪设置</h3>
+                <p class="text-sm text-gray-600">配置数据收集的相关设置</p>
+            </div>
+        </div>
+        
+        <div class="space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <label class="text-sm font-medium text-gray-700">页面浏览跟踪</label>
+                    <p class="text-xs text-gray-500">自动跟踪页面访问</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="trackPageview" checked class="sr-only peer">
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+            </div>
+            
+            <div class="flex items-center justify-between">
+                <div>
+                    <label class="text-sm font-medium text-gray-700">停留时长跟踪</label>
+                    <p class="text-xs text-gray-500">跟踪用户在页面的停留时间</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="trackDuration" checked class="sr-only peer">
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+            </div>
+            
+            <div class="flex items-center justify-between">
+                <div>
+                    <label class="text-sm font-medium text-gray-700">事件跟踪</label>
+                    <p class="text-xs text-gray-500">允许自定义事件跟踪</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="trackEvents" checked class="sr-only peer">
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 数据管理 -->
+<div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+    <h2 class="text-xl font-semibold text-gray-900 mb-6">数据管理</h2>
+    
+    <!-- 数据导出 -->
+    <div class="mb-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">数据导出</h3>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="border border-gray-200 rounded-lg p-4">
+                <h4 class="font-medium text-gray-900 mb-2">页面数据</h4>
+                <p class="text-sm text-gray-600 mb-3">导出页面访问量排行</p>
+                <button onclick="exportData('pages')" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm">
+                    导出页面
+                </button>
+            </div>
+            <div class="border border-gray-200 rounded-lg p-4">
+                <h4 class="font-medium text-gray-900 mb-2">设备数据</h4>
+                <p class="text-sm text-gray-600 mb-3">导出设备访问量排行</p>
+                <button onclick="exportData('devices')" class="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 text-sm">
+                    导出设备
+                </button>
+            </div>
+            <div class="border border-gray-200 rounded-lg p-4">
+                <h4 class="font-medium text-gray-900 mb-2">城市数据</h4>
+                <p class="text-sm text-gray-600 mb-3">导出城市访问量排行</p>
+                <button onclick="exportData('cities')" class="w-full bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 text-sm">
+                    导出城市
+                </button>
+            </div>
+            <div class="border border-gray-200 rounded-lg p-4">
+                <h4 class="font-medium text-gray-900 mb-2">事件数据</h4>
+                <p class="text-sm text-gray-600 mb-3">导出自定义事件和交互数据</p>
+                <button onclick="exportData('events')" class="w-full bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700 text-sm">
+                    导出事件
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 数据清理 -->
+    <div>
+        <h3 class="text-lg font-medium text-gray-900 mb-4">数据清理</h3>
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800">危险操作</h3>
+                    <div class="mt-2 text-sm text-yellow-700">
+                        <p>删除数据是不可逆操作，请谨慎操作。删除后数据将无法恢复。</p>
+                    </div>
+                    <div class="mt-4">
+                        <div class="flex items-center space-x-4">
+                            <button onclick="showDeleteDialog()" class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm">
+                                删除数据
+                            </button>
+                            <span class="text-sm text-gray-600">选择要删除的数据类型和时间范围</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 站点状态 -->
+<div class="bg-white rounded-lg shadow-sm p-6">
+    <h2 class="text-xl font-semibold text-gray-900 mb-6">站点状态</h2>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="font-medium text-gray-900">站点状态</h3>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    正常
+                </span>
+            </div>
+            <p class="text-sm text-gray-600">站点跟踪代码运行正常</p>
+        </div>
+        
+        <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="font-medium text-gray-900">数据收集</h3>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    活跃
+                </span>
+            </div>
+            <p class="text-sm text-gray-600">最近24小时有数据收集</p>
+        </div>
+    </div>
+    
+    <div class="mt-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">最近活动</h3>
+        <div class="space-y-3" id="recentActivity">
+            <div class="flex items-center space-x-3 text-sm text-gray-600">
+                <i class="fas fa-circle text-green-400 text-xs"></i>
+                <span>数据收集正常 - 2分钟前</span>
+            </div>
+            <div class="flex items-center space-x-3 text-sm text-gray-600">
+                <i class="fas fa-circle text-blue-400 text-xs"></i>
+                <span>设置更新 - 1小时前</span>
+            </div>
+            <div class="flex items-center space-x-3 text-sm text-gray-600">
+                <i class="fas fa-circle text-gray-400 text-xs"></i>
+                <span>站点创建 - 3天前</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const siteId = '{{.SiteId}}';
+    const siteName = '{{.SiteName}}';
+    const siteDomain = '{{.SiteDomain}}';
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        generateTrackingCode();
+        loadSiteSettings();
+        
+        // 绑定表单提交事件
+        document.getElementById('siteInfoForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            saveSiteInfo();
+        });
+        
+        // 绑定设置变化事件
+        document.getElementById('trackPageview').addEventListener('change', function() {
+            updateTrackingSettings();
+        });
+        document.getElementById('trackDuration').addEventListener('change', function() {
+            updateTrackingSettings();
+        });
+        document.getElementById('trackEvents').addEventListener('change', function() {
+            updateTrackingSettings();
+        });
+    });
+
+    // 生成跟踪代码
+    function generateTrackingCode() {
+        const apiUrl = window.location.protocol + '//' + window.location.host;
+        const code = '<' + 'script src="' + apiUrl + '/api/script/stat.js?site_id=' + siteId + '&api_url=' + encodeURIComponent(apiUrl) + '" site-id="' + siteId + '" data-api-url="' + apiUrl + '" async></' + 'script>';
+        
+        document.getElementById('trackingCode').value = code;
+    }
+
+    // 复制跟踪代码
+    function copyTrackingCode() {
+        const textarea = document.getElementById('trackingCode');
+        textarea.select();
+        document.execCommand('copy');
+        
+        showNotification('跟踪代码已复制到剪贴板', 'success');
+    }
+
+    // 加载站点设置
+    function loadSiteSettings() {
+        fetch('/api/site/' + siteId + '/settings', {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const settings = data.data;
+                document.getElementById('trackPageview').checked = settings.track_pageview !== false;
+                document.getElementById('trackDuration').checked = settings.track_duration !== false;
+                document.getElementById('trackEvents').checked = settings.track_events !== false;
+                generateTrackingCode();
+            }
+        })
+        .catch(error => {
+            console.error('Error loading settings:', error);
+        });
+    }
+
+    // 保存站点信息
+    function saveSiteInfo() {
+        const formData = {
+            site_name: document.getElementById('siteName').value,
+            site_domain: document.getElementById('siteDomain').value,
+            site_description: document.getElementById('siteDescription').value
+        };
+
+        fetch('/api/site/' + siteId, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('站点信息保存成功', 'success');
+                generateTrackingCode();
+            } else {
+                showNotification('保存失败: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('保存失败，请重试', 'error');
+        });
+    }
+
+    // 更新跟踪设置
+    function updateTrackingSettings() {
+        const settings = {
+            track_pageview: document.getElementById('trackPageview').checked,
+            track_duration: document.getElementById('trackDuration').checked,
+            track_events: document.getElementById('trackEvents').checked
+        };
+
+        fetch('/api/site/' + siteId + '/settings', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
+            body: JSON.stringify(settings)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('跟踪设置已更新', 'success');
+                generateTrackingCode();
+            } else {
+                showNotification('更新失败: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('更新失败，请重试', 'error');
+        });
+    }
+
+    // 导出数据
+    function exportData(type) {
+        const params = new URLSearchParams({
+            site_id: siteId,
+            type: type,
+            format: 'csv'
+        });
+        window.open('/api/stat/export?' + params, '_blank');
+    }
+
+    // 显示删除对话框
+    function showDeleteDialog() {
+        const confirmed = confirm('确定要删除数据吗？此操作不可逆！\n\n请输入 "DELETE" 确认删除：');
+        if (confirmed) {
+            const input = prompt('请输入 "DELETE" 确认删除：');
+            if (input === 'DELETE') {
+                deleteData();
+            } else {
+                showNotification('删除已取消', 'info');
+            }
+        }
+    }
+
+    // 删除数据
+    function deleteData() {
+        const type = prompt('请选择要删除的数据类型：\n1. 访问数据\n2. 事件数据\n3. 所有数据\n\n请输入数字(1-3)：');
+        
+        if (!type || !['1', '2', '3'].includes(type)) {
+            showNotification('删除已取消', 'info');
+            return;
+        }
+
+        const days = prompt('请选择要删除的时间范围（天数，0表示全部）：');
+        if (days === null) {
+            showNotification('删除已取消', 'info');
+            return;
+        }
+
+        const data = {
+            type: type,
+            days: parseInt(days) || 0
+        };
+
+        fetch('/api/site/' + siteId + '/data', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('数据删除成功', 'success');
+            } else {
+                showNotification('删除失败: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('删除失败，请重试', 'error');
+        });
+    }
+</script>
+
+{{end}}

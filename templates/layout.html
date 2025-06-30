@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} - 统计系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        .sidebar-transition { transition: all 0.3s ease; }
+        .card-hover { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .glass-effect { backdrop-filter: blur(10px); background: rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 导航栏 -->
+    <nav class="bg-white shadow-lg fixed w-full z-50">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <h1 class="text-xl font-bold text-gray-800">统计系统</h1>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4" id="user-info">
+                    <!-- 用户信息将通过JavaScript动态更新 -->
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 侧边栏 -->
+    <div class="fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-lg transform transition-transform duration-300 hidden" id="sidebar">
+        <div class="flex items-center justify-center h-16 border-b">
+            <h2 class="text-lg font-semibold text-gray-800">管理面板</h2>
+        </div>
+        <nav class="mt-8">
+            <div class="px-4 space-y-2">
+                <a href="/admin/dashboard" class="flex items-center px-4 py-2 text-gray-700 rounded-lg hover:bg-gray-100 {{if eq .Page "dashboard"}}bg-blue-50 text-blue-600{{end}}">
+                    <i class="fas fa-tachometer-alt w-5 h-5 mr-3"></i>
+                    <span>仪表盘</span>
+                </a>
+                <a href="/admin/sites" class="flex items-center px-4 py-2 text-gray-700 rounded-lg hover:bg-gray-100 {{if eq .Page "sites"}}bg-blue-50 text-blue-600{{end}}">
+                    <i class="fas fa-globe w-5 h-5 mr-3"></i>
+                    <span>站点管理</span>
+                </a>
+                <a href="/admin/settings" class="flex items-center px-4 py-2 text-gray-700 rounded-lg hover:bg-gray-100 {{if eq .Page "settings"}}bg-blue-50 text-blue-600{{end}}">
+                    <i class="fas fa-cog w-5 h-5 mr-3"></i>
+                    <span>系统设置</span>
+                </a>
+            </div>
+        </nav>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="pt-16" id="main-content">
+        <main class="p-6">
+            {{if eq .ContentTemplate "dashboard_content"}}
+                {{template "dashboard_content" .}}
+            {{else if eq .ContentTemplate "sites_content"}}
+                {{template "sites_content" .}}
+            {{else if eq .ContentTemplate "events_content"}}
+                {{template "events_content" .}}
+            {{else if eq .ContentTemplate "reports_content"}}
+                {{template "reports_content" .}}
+            {{else if eq .ContentTemplate "settings_content"}}
+                {{template "settings_content" .}}
+            {{else}}
+                <!-- 默认内容 -->
+                <div class="text-center text-gray-500">
+                    <p>页面内容加载中...</p>
+                </div>
+            {{end}}
+        </main>
+    </div>
+
+    <!-- 移动端菜单按钮 -->
+    <button id="mobile-menu-btn" class="fixed top-4 left-4 z-50 lg:hidden bg-white p-2 rounded-md shadow-lg hidden">
+        <i class="fas fa-bars text-gray-600"></i>
+    </button>
+
+    <!-- 通知组件 -->
+    <div id="notification" class="fixed top-20 right-4 z-50 hidden">
+        <div class="bg-white rounded-lg shadow-lg p-4 max-w-sm">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i id="notification-icon" class="fas fa-info-circle text-blue-500"></i>
+                </div>
+                <div class="ml-3">
+                    <p id="notification-message" class="text-sm font-medium text-gray-900"></p>
+                </div>
+                <div class="ml-auto pl-3">
+                    <button onclick="hideNotification()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        // 获取用户信息
+        function loadUserInfo() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                updateUIForGuest();
+                return;
+            }
+
+            fetch('/api/user/profile', {
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentUser = data.data;
+                    updateUIForUser(currentUser);
+                } else {
+                    updateUIForGuest();
+                }
+            })
+            .catch(error => {
+                console.error('获取用户信息失败:', error);
+                updateUIForGuest();
+            });
+        }
+
+        // 更新为已登录用户界面
+        function updateUIForUser(user) {
+            const userInfo = document.getElementById('user-info');
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main-content');
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+
+            // 检查用户对象是否存在
+            if (!user) {
+                console.error('User object is undefined');
+                updateUIForGuest();
+                return;
+            }
+
+            // 更新用户信息区域
+            userInfo.innerHTML = `
+                <div class="flex items-center space-x-2">
+                    <img class="h-8 w-8 rounded-full" src="${user.avatar || ''}" alt="头像" onerror="this.src='https://ui-avatars.com/api/?name=${user.username || 'User'}&background=667eea&color=fff'">
+                    <span class="text-sm font-medium text-gray-700">${user.nickname || user.username || '用户'}</span>
+                </div>
+                <button onclick="logout()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            `;
+
+            // 显示侧边栏
+            sidebar.classList.remove('hidden');
+            mainContent.classList.add('ml-64');
+            mobileMenuBtn.classList.remove('hidden');
+        }
+
+        // 更新为访客界面
+        function updateUIForGuest() {
+            const userInfo = document.getElementById('user-info');
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main-content');
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+
+            // 更新用户信息区域
+            userInfo.innerHTML = `
+                <a href="/login" class="text-blue-600 hover:text-blue-800">登录</a>
+            `;
+
+            // 隐藏侧边栏
+            sidebar.classList.add('hidden');
+            mainContent.classList.remove('ml-64');
+            mobileMenuBtn.classList.add('hidden');
+        }
+
+        // 移动端菜单切换
+        document.getElementById('mobile-menu-btn')?.addEventListener('click', function() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('-translate-x-full');
+        });
+
+        // 通知系统
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            const messageEl = document.getElementById('notification-message');
+            const iconEl = document.getElementById('notification-icon');
+            
+            messageEl.textContent = message;
+            
+            // 设置图标和颜色
+            const icons = {
+                success: 'fas fa-check-circle text-green-500',
+                error: 'fas fa-exclamation-circle text-red-500',
+                warning: 'fas fa-exclamation-triangle text-yellow-500',
+                info: 'fas fa-info-circle text-blue-500'
+            };
+            
+            iconEl.className = icons[type] || icons.info;
+            
+            notification.classList.remove('hidden');
+            
+            // 3秒后自动隐藏
+            setTimeout(() => {
+                hideNotification();
+            }, 3000);
+        }
+
+        function hideNotification() {
+            document.getElementById('notification').classList.add('hidden');
+        }
+
+        // 登出功能
+        function logout() {
+            fetch('/api/auth/logout', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('token')
+                }
+            }).then(() => {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+            }).catch(() => {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+            });
+        }
+
+        // 检查登录状态
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token && window.location.pathname.startsWith('/admin')) {
+                window.location.href = '/login';
+                return;
+            }
+            
+            if (token && window.location.pathname.startsWith('/admin')) {
+                // 验证token有效性
+                fetch('/api/user/profile', {
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Token invalid');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (!data.success) {
+                        throw new Error('Token invalid');
+                    }
+                    // Token有效，可以继续访问
+                })
+                .catch(error => {
+                    console.log('Token无效，清除并跳转到登录页');
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    // 清除cookie
+                    document.cookie = 'token=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT';
+                    window.location.href = '/login';
+                });
+            }
+        }
+
+        // 页面加载时检查认证并加载用户信息
+        checkAuth();
+        loadUserInfo();
+    </script>
+</body>
+</html> 

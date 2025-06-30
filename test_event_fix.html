@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>事件上报测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>事件上报功能测试</h1>
+    
+    <div class="test-section">
+        <h2>1. 页面访问统计</h2>
+        <p>页面加载时会自动上报PV数据</p>
+        <div class="log" id="pv-log">等待页面加载...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. 事件上报测试</h2>
+        <button onclick="testButtonClick()">测试按钮点击事件</button>
+        <button onclick="testCustomEvent()">测试自定义事件</button>
+        <button onclick="testFormEvent()">测试表单事件</button>
+        <div class="log" id="event-log">事件日志将显示在这里...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. 停留时长测试</h2>
+        <p>页面停留时长会自动上报，关闭页面时会发送最终时长</p>
+        <div class="log" id="duration-log">停留时长日志...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. 环境信息</h2>
+        <div class="log" id="env-log">环境信息...</div>
+    </div>
+
+    <!-- 引入统计脚本 -->
+    <script src="/api/script/stat.js?site_id=test123&api_url=http://localhost:8080" site-id="test123" data-api-url="http://localhost:8080"></script>
+
+    <script>
+        // 测试按钮点击事件
+        function testButtonClick() {
+            if (window.statReportEvent) {
+                window.statReportEvent('button_click', 'test_button', {
+                    button_id: 'test-btn',
+                    page: window.location.pathname
+                });
+                logEvent('按钮点击事件已上报');
+            } else {
+                logEvent('错误：statReportEvent 函数未定义');
+            }
+        }
+
+        // 测试自定义事件
+        function testCustomEvent() {
+            if (window.statReportEvent) {
+                window.statReportEvent('custom_event', 'test_value', {
+                    category: 'test',
+                    action: 'custom',
+                    label: 'test_label'
+                });
+                logEvent('自定义事件已上报');
+            } else {
+                logEvent('错误：statReportEvent 函数未定义');
+            }
+        }
+
+        // 测试表单事件
+        function testFormEvent() {
+            if (window.statReportEvent) {
+                window.statReportEvent('form_submit', 'test_form', {
+                    form_id: 'test-form',
+                    form_type: 'contact'
+                });
+                logEvent('表单事件已上报');
+            } else {
+                logEvent('错误：statReportEvent 函数未定义');
+            }
+        }
+
+        // 记录事件日志
+        function logEvent(message) {
+            const log = document.getElementById('event-log');
+            const time = new Date().toLocaleTimeString();
+            log.innerHTML += `[${time}] ${message}<br>`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // 显示环境信息
+        function showEnvInfo() {
+            const envLog = document.getElementById('env-log');
+            const info = {
+                userAgent: navigator.userAgent,
+                screen: `${screen.width}x${screen.height}`,
+                language: navigator.language,
+                platform: navigator.platform,
+                cookieEnabled: navigator.cookieEnabled,
+                onLine: navigator.onLine,
+                connection: navigator.connection ? navigator.connection.effectiveType : 'unknown'
+            };
+            
+            envLog.innerHTML = '<strong>环境信息：</strong><br>' + 
+                Object.entries(info).map(([key, value]) => `${key}: ${value}`).join('<br>');
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 显示环境信息
+            showEnvInfo();
+            
+            // 记录PV上报
+            setTimeout(() => {
+                document.getElementById('pv-log').innerHTML = '页面访问统计已自动上报';
+            }, 1000);
+
+            // 记录停留时长
+            let startTime = Date.now();
+            setInterval(() => {
+                const duration = Math.round((Date.now() - startTime) / 1000);
+                document.getElementById('duration-log').innerHTML = `当前停留时长：${duration}秒`;
+            }, 1000);
+
+            // 检查统计脚本是否加载
+            setTimeout(() => {
+                if (window.statReportEvent) {
+                    logEvent('统计脚本加载成功');
+                } else {
+                    logEvent('错误：统计脚本加载失败');
+                }
+            }, 2000);
+        });
+    </script>
+</body>
+</html> 

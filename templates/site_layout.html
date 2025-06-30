@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} - {{.SiteName}}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .transition-all {
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 顶部导航栏 -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/admin/sites" class="flex items-center text-gray-700 hover:text-gray-900">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        <span>返回站点列表</span>
+                    </a>
+                </div>
+                <div class="flex items-center">
+                    <div class="flex items-center space-x-4">
+                        <div class="text-sm text-gray-700">
+                            <span class="font-medium">{{.SiteName}}</span>
+                            <span class="text-gray-500 ml-2">({{.SiteId}})</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <img id="user-avatar" class="w-8 h-8 rounded-full bg-gray-300" src="" alt="用户头像">
+                            <span id="user-name" class="text-sm text-gray-700">加载中...</span>
+                            <button onclick="logout()" class="text-sm text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 站点信息卡片 -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">{{.SiteName}}</h1>
+                    <p class="text-gray-500 mt-1">站点ID: {{.SiteId}}</p>
+                    <p class="text-gray-500">{{.SiteRemark}}</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="text-right">
+                        <p class="text-sm text-gray-500">今日PV</p>
+                        <p id="today-pv" class="text-2xl font-bold text-blue-600">-</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-gray-500">今日UV</p>
+                        <p id="today-uv" class="text-2xl font-bold text-green-600">-</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 导航菜单 -->
+        <div class="bg-white rounded-lg shadow-sm mb-6">
+            <nav class="flex space-x-8 px-6">
+                <a href="/admin/site/{{.SiteId}}/dashboard" 
+                   class="py-4 px-1 border-b-2 font-medium text-sm {{if eq .CurrentPage "dashboard"}}border-blue-500 text-blue-600{{else}}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{{end}}">
+                    <i class="fas fa-chart-line mr-2"></i>数据概览
+                </a>
+                <a href="/admin/site/{{.SiteId}}/reports" 
+                   class="py-4 px-1 border-b-2 font-medium text-sm {{if eq .CurrentPage "reports"}}border-blue-500 text-blue-600{{else}}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{{end}}">
+                    <i class="fas fa-chart-bar mr-2"></i>数据报表
+                </a>
+                <a href="/admin/site/{{.SiteId}}/events" 
+                   class="py-4 px-1 border-b-2 font-medium text-sm {{if eq .CurrentPage "events"}}border-blue-500 text-blue-600{{else}}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{{end}}">
+                    <i class="fas fa-list mr-2"></i>事件分析
+                </a>
+                <a href="/admin/site/{{.SiteId}}/settings" 
+                   class="py-4 px-1 border-b-2 font-medium text-sm {{if eq .CurrentPage "settings"}}border-blue-500 text-blue-600{{else}}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{{end}}">
+                    <i class="fas fa-cog mr-2"></i>站点设置
+                </a>
+            </nav>
+        </div>
+
+        <!-- 页面内容 -->
+        <div class="content-area">
+            {{if eq .ContentTemplate "site_dashboard_content"}}
+                {{template "site_dashboard_content" .}}
+            {{else if eq .ContentTemplate "site_reports_content"}}
+                {{template "site_reports_content" .}}
+            {{else if eq .ContentTemplate "site_events_content"}}
+                {{template "site_events_content" .}}
+            {{else if eq .ContentTemplate "site_settings_content"}}
+                {{template "site_settings_content" .}}
+            {{else}}
+                <!-- 默认内容 -->
+                <div class="text-center text-gray-500">
+                    <p>页面内容加载中...</p>
+                </div>
+            {{end}}
+        </div>
+    </div>
+
+    <!-- 通知组件 -->
+    <div id="notification" class="fixed top-4 right-4 z-50 hidden">
+        <div class="bg-white rounded-lg shadow-lg p-4 max-w-sm">
+            <div class="flex items-center">
+                <div id="notification-icon" class="flex-shrink-0 mr-3"></div>
+                <div>
+                    <p id="notification-message" class="text-sm font-medium text-gray-900"></p>
+                </div>
+                <button onclick="hideNotification()" class="ml-4 text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 加载用户信息
+        function loadUserInfo() {
+            fetch('/api/user/profile', {
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('token')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('user-name').textContent = data.data.nickname || data.data.username;
+                    if (data.data.avatar) {
+                        document.getElementById('user-avatar').src = data.data.avatar;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        // 加载今日统计数据
+        function loadTodayStats() {
+            fetch('/api/stat/dashboard?site_id={{.SiteId}}', {
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('token')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('today-pv').textContent = data.data.today_pv || 0;
+                    document.getElementById('today-uv').textContent = data.data.today_uv || 0;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        // 显示通知
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            const messageEl = document.getElementById('notification-message');
+            const iconEl = document.getElementById('notification-icon');
+            
+            messageEl.textContent = message;
+            
+            // 设置图标和颜色
+            let icon, bgColor;
+            switch(type) {
+                case 'success':
+                    icon = '<i class="fas fa-check-circle text-green-500"></i>';
+                    bgColor = 'border-l-4 border-green-500';
+                    break;
+                case 'error':
+                    icon = '<i class="fas fa-exclamation-circle text-red-500"></i>';
+                    bgColor = 'border-l-4 border-red-500';
+                    break;
+                case 'warning':
+                    icon = '<i class="fas fa-exclamation-triangle text-yellow-500"></i>';
+                    bgColor = 'border-l-4 border-yellow-500';
+                    break;
+                default:
+                    icon = '<i class="fas fa-info-circle text-blue-500"></i>';
+                    bgColor = 'border-l-4 border-blue-500';
+            }
+            
+            iconEl.innerHTML = icon;
+            notification.className = `fixed top-4 right-4 z-50 bg-white rounded-lg shadow-lg p-4 max-w-sm ${bgColor}`;
+            notification.classList.remove('hidden');
+            
+            // 3秒后自动隐藏
+            setTimeout(hideNotification, 3000);
+        }
+
+        // 隐藏通知
+        function hideNotification() {
+            document.getElementById('notification').classList.add('hidden');
+        }
+
+        // 退出登录
+        function logout() {
+            fetch('/api/auth/logout', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('token')
+                }
+            })
+            .then(() => {
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+            });
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserInfo();
+            loadTodayStats();
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,410 @@
+/**
+ * 网站统计埋点脚本
+ * 
+ * 功能说明：
+ * 1. 自动采集页面访问数据（PV、UV、停留时长）
+ * 2. 支持自定义事件埋点上报
+ * 3. 自动识别设备、浏览器、操作系统信息
+ * 4. 支持事件类型自动分类
+ * 
+ * 使用方法：
+ * 1. 引入脚本：<script src="/static/js/stat.js" site-id="your_site_id"></script>
+ * 2. 事件埋点：statReportEvent('button_click', 'submit_button', {page: 'home'})
+ * 
+ * 作者：统计系统
+ * 版本：1.0
+ */
+(function() {
+    /**
+     * 获取API地址
+     * 优先级：script标签属性 > 全局变量 > 模板变量
+     * @returns {string} API基础地址
+     */
+    function getApiUrl() {
+      // 1. 尝试从当前 script 标签属性获取
+      var scripts = document.getElementsByTagName('script');
+      for (var i = 0; i < scripts.length; i++) {
+        if (scripts[i].src && scripts[i].src.indexOf('stat.js') !== -1) {
+          if (scripts[i].getAttribute('data-api-url')) {
+            return scripts[i].getAttribute('data-api-url');
+          }
+        }
+      }
+      // 2. 尝试从全局变量获取
+      if (window.statApiUrl) return window.statApiUrl;
+      // 3. 默认使用模板变量中的API URL
+      return '{{.ApiURL}}';
+    }
+
+    /**
+     * 自动获取站点ID
+     * 优先级：script标签属性 > 全局变量 > 模板变量
+     * @returns {string} 站点唯一标识
+     */
+    function getSiteId() {
+      // 1. 尝试从当前 script 标签属性获取
+      var scripts = document.getElementsByTagName('script');
+      for (var i = 0; i < scripts.length; i++) {
+        if (scripts[i].src && scripts[i].src.indexOf('stat.js') !== -1 && scripts[i].getAttribute('site-id')) {
+          return scripts[i].getAttribute('site-id');
+        }
+      }
+      // 2. 尝试从全局变量获取
+      if (window.statSiteId) return window.statSiteId;
+      // 3. 使用模板变量中的站点ID
+      return '{{.SiteID}}';
+    }
+
+    /**
+     * 匿名用户ID生成与获取
+     * 使用Cookie存储，有效期1年
+     * @returns {string} 匿名用户唯一标识
+     */
+    function getOrCreateAnonId() {
+      var key = 'stat_anon_id';
+      var match = document.cookie.match(new RegExp('(^| )' + key + '=([^;]+)'));
+      var id = match ? match[2] : '';
+      if (!id) {
+        // 生成UUID格式的匿名ID
+        id = ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, function(c) {
+          return (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16);
+        });
+        document.cookie = key + '=' + id + ';path=/;max-age=31536000';
+      }
+      return id;
+    }
+
+    /**
+     * 自动获取用户ID
+     * 优先级：全局变量 > 匿名ID
+     * @returns {string} 用户唯一标识
+     */
+    function getUserId() {
+      return window.statUserId || getOrCreateAnonId();
+    }
+
+    /**
+     * 获取环境信息
+     * 包含页面路径、来源、用户代理、屏幕信息等
+     * @returns {object} 环境信息对象
+     */
+    function getEnvInfo() {
+      return {
+        path: location.pathname,           // 当前页面路径
+        ref: document.referrer,            // 来源页面
+        ua: navigator.userAgent,           // 用户代理字符串
+        width: screen.width,               // 屏幕宽度
+        height: screen.height,             // 屏幕高度
+        colorDepth: screen.colorDepth,     // 屏幕色深
+        lang: navigator.language,          // 浏览器语言
+        net: navigator.connection ? navigator.connection.effectiveType : '', // 网络类型
+        site_id: getSiteId(),              // 站点ID
+        user_id: getUserId(),              // 用户ID
+        device: getDeviceType(),           // 设备类型
+        os: getOSType(),                   // 操作系统
+        browser: getBrowserType()          // 浏览器类型
+        // 可选：采集更多环境信息
+      };
+    }
+  
+    /**
+     * 上报页面访问数据（PV）
+     * 页面加载时自动调用
+     */
+    function reportPV() {
+      var apiUrl = getApiUrl();
+      fetch(apiUrl + '/api/track/pv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(getEnvInfo())
+      });
+    }
+  
+    /**
+     * 停留时长上报相关变量
+     */
+    var enterTime = Date.now();           // 页面进入时间
+    var apiUrl = getApiUrl();             // API地址
+    var path = location.pathname;         // 当前页面路径
+    var heartbeatInterval = 3;            // 心跳间隔（秒）
+
+    /**
+     * 发送心跳数据
+     * 定期上报用户停留时长
+     */
+    function sendHeartbeat() {
+      var duration = Math.round((Date.now() - enterTime) / 1000);
+      var data = Object.assign(getEnvInfo(), {
+        path: path,
+        duration: duration,
+        heartbeat: true
+      });
+      fetch(apiUrl + '/api/track/duration', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+    }
+
+    // 页面每3秒上报一次心跳数据
+    var heartbeatTimer = setInterval(sendHeartbeat, heartbeatInterval * 1000);
+
+    /**
+     * 页面离开时上报最终停留时长
+     * 使用 sendBeacon 确保数据不丢失
+     */
+    window.addEventListener('beforeunload', function() {
+      clearInterval(heartbeatTimer);
+      var duration = Math.round((Date.now() - enterTime) / 1000);
+      var data = Object.assign(getEnvInfo(), {
+        path: path,
+        duration: duration,
+        heartbeat: false
+      });
+      var dataStr = JSON.stringify(data);
+      if (navigator.sendBeacon) {
+        // 优先使用 sendBeacon，确保页面关闭时数据能发送
+        navigator.sendBeacon(apiUrl + '/api/track/duration', dataStr);
+      } else {
+        // 降级使用同步XHR
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', apiUrl + '/api/track/duration', false);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.send(dataStr);
+      }
+    });
+  
+    // 页面加载时立即上报PV
+    reportPV();
+
+    /**
+     * 事件埋点上报函数
+     * 全局函数，供页面调用
+     * 
+     * @param {string} eventName - 事件名称，如 'button_click', 'form_submit'
+     * @param {string} value - 事件值，如按钮文本、表单数据等
+     * @param {object} extra - 额外数据，如页面信息、用户行为等
+     * @param {string} category - （可选）自定义事件分类
+     * 
+     * 使用示例：
+     * statReportEvent('button_click', 'submit_button', {page: 'home', section: 'header'}, '自定义分类')
+     * statReportEvent('form_submit', 'contact_form', {form_type: 'contact'}, '表单事件')
+     * statReportEvent('scroll', 'page_scroll', {scroll_percent: 50}, '滚动事件')
+     */
+    window.statReportEvent = function(eventName, value, extra, category) {
+      var data = Object.assign(getEnvInfo(), {
+        event_name: eventName,
+        event_category: category || getEventCategory(eventName), // 优先用自定义
+        value: value || '',
+        extra: extra ? JSON.stringify(extra) : '',
+        // 确保包含所有必要的字段
+        ip: '',                                   // IP地址（后端从请求中获取）
+        ua: navigator.userAgent,                  // 用户代理
+        referer: document.referrer,               // 来源页面
+        screen: screen.width + 'x' + screen.height, // 屏幕分辨率
+        net: navigator.connection ? navigator.connection.effectiveType : '', // 网络类型
+        // 设备信息
+        device: getDeviceType(),                  // 设备类型
+        os: getOSType(),                          // 操作系统
+        browser: getBrowserType()                 // 浏览器类型
+      });
+      var apiUrl = getApiUrl();
+      fetch(apiUrl + '/api/track/event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+    };
+
+    /**
+     * 根据事件名称自动推断事件类型分类
+     * 用于数据分析和报表展示
+     * 
+     * @param {string} eventName - 事件名称
+     * @returns {string} 事件类型分类
+     * 
+     * 分类规则：
+     * - 点击事件：包含 click, tap, button 的事件
+     * - 滚动事件：包含 scroll 的事件
+     * - 表单事件：包含 form, submit, input 的事件
+     * - 页面事件：包含 page, view, load 的事件
+     * - 用户交互：包含 user, interaction, action 的事件
+     * - 自定义事件：包含 custom 的事件
+     * - 其他事件：未匹配到以上分类的事件
+     */
+    function getEventCategory(eventName) {
+      if (!eventName) return '未知';
+      
+      const name = eventName.toLowerCase();
+      
+      // 点击相关事件
+      if (name.includes('click') || name.includes('tap') || name.includes('button')) {
+        return '点击事件';
+      }
+      
+      // 滚动相关事件
+      if (name.includes('scroll')) {
+        return '滚动事件';
+      }
+      
+      // 表单相关事件
+      if (name.includes('form') || name.includes('submit') || name.includes('input')) {
+        return '表单事件';
+      }
+      
+      // 页面相关事件
+      if (name.includes('page') || name.includes('view') || name.includes('load')) {
+        return '页面事件';
+      }
+      
+      // 用户交互事件
+      if (name.includes('user') || name.includes('interaction') || name.includes('action')) {
+        return '用户交互';
+      }
+      
+      // 自定义事件
+      if (name.includes('custom') || name.includes('custom_')) {
+        return '自定义事件';
+      }
+      
+      // 默认分类
+      return '其他事件';
+    }
+
+    /**
+     * 设备类型识别
+     * 基于用户代理字符串识别设备类型
+     * 
+     * @returns {string} 设备类型
+     * 返回值：iPhone, iPad, Android, Mobile, Desktop
+     */
+    function getDeviceType() {
+      var ua = navigator.userAgent;
+
+      // 1. 品牌+型号优先（Android 及国产系统）
+      var androidModelMatch = ua.match(/Android [\d.]+; ([^;\)\[]+)[;\)\[]/i);
+      if (androidModelMatch) {
+        var model = androidModelMatch[1].trim();
+        // 品牌归类
+        if (/HUAWEI|HONOR/i.test(model)) return 'Huawei ' + model;
+        if (/MI|Redmi|Xiaomi/i.test(model)) return 'Xiaomi ' + model;
+        if (/OPPO/i.test(model)) return 'OPPO ' + model;
+        if (/VIVO/i.test(model)) return 'Vivo ' + model;
+        if (/SM-|Samsung/i.test(model)) return 'Samsung ' + model;
+        if (/ONEPLUS/i.test(model)) return 'OnePlus ' + model;
+        if (/MEIZU/i.test(model)) return 'Meizu ' + model;
+        if (/REALME/i.test(model)) return 'Realme ' + model;
+        if (/NUBIA/i.test(model)) return 'Nubia ' + model;
+        if (/ZTE/i.test(model)) return 'ZTE ' + model;
+        if (/LENOVO/i.test(model)) return 'Lenovo ' + model;
+        if (/SONY/i.test(model)) return 'Sony ' + model;
+        if (/Pixel/i.test(model)) return 'Google Pixel ' + model;
+        if (/Lumia/i.test(model)) return 'Microsoft Lumia ' + model;
+        if (/HarmonyOS/i.test(ua) || /HarmonyOS/i.test(model)) return 'HarmonyOS ' + model; // 鸿蒙
+        if (/MiOS|Pengpai|SurgeOS/i.test(ua) || /MiOS|Pengpai|SurgeOS/i.test(model)) return 'PengpaiOS ' + model; // 澎湃
+        // 其他品牌直接返回型号
+        if (model && !/Build/i.test(model)) return model;
+      }
+
+      // 2. 品牌
+      if (/iPhone/i.test(ua)) return 'Apple iPhone';
+      if (/iPad/i.test(ua)) return 'Apple iPad';
+      if (/HUAWEI|HONOR/i.test(ua)) return 'Huawei';
+      if (/MI|Redmi|Xiaomi/i.test(ua)) return 'Xiaomi';
+      if (/OPPO/i.test(ua)) return 'OPPO';
+      if (/VIVO/i.test(ua)) return 'Vivo';
+      if (/SM-|Samsung/i.test(ua)) return 'Samsung';
+      if (/ONEPLUS/i.test(ua)) return 'OnePlus';
+      if (/MEIZU/i.test(ua)) return 'Meizu';
+      if (/REALME/i.test(ua)) return 'Realme';
+      if (/NUBIA/i.test(ua)) return 'Nubia';
+      if (/ZTE/i.test(ua)) return 'ZTE';
+      if (/LENOVO/i.test(ua)) return 'Lenovo';
+      if (/SONY/i.test(ua)) return 'Sony';
+      if (/Pixel/i.test(ua)) return 'Google Pixel';
+      if (/Lumia/i.test(ua)) return 'Microsoft Lumia';
+      if (/HarmonyOS/i.test(ua)) return 'HarmonyOS'; // 鸿蒙
+      if (/MiOS|Pengpai|SurgeOS/i.test(ua)) return 'PengpaiOS'; // 澎湃
+
+      // 3. 平台兜底
+      if (/Android/i.test(ua)) return 'Android';
+      if (/iOS/i.test(ua)) return 'iOS';
+      if (/Mobile/i.test(ua)) return 'Mobile';
+      return 'Desktop';
+    }
+
+    /**
+     * 操作系统识别
+     * 基于用户代理字符串识别操作系统
+     * 
+     * @returns {string} 操作系统类型
+     * 返回值：Windows, macOS, Linux, iOS, Android, Unknown
+     */
+    function getOSType() {
+      var ua = navigator.userAgent;
+      if (ua.includes('Windows')) return 'Windows';
+      if (ua.includes('Mac OS X')) return 'macOS';
+      if (ua.includes('Linux')) return 'Linux';
+      if (ua.includes('iOS')) return 'iOS';
+      if (ua.includes('Android')) return 'Android';
+      if (/HarmonyOS/i.test(ua)) return 'HarmonyOS'; // 鸿蒙
+      if (/MiOS|Pengpai|SurgeOS/i.test(ua)) return 'PengpaiOS'; // 澎湃
+      return 'Unknown';
+    }
+
+    /**
+     * 浏览器识别
+     * 基于用户代理字符串识别浏览器类型
+     * 
+     * @returns {string} 浏览器类型
+     * 返回值：Chrome, Firefox, Safari, Edge, Opera, Unknown
+     */
+    function getBrowserType() {
+      var ua = navigator.userAgent;
+      // 优先判断主流 App 内嵌浏览器/客户端
+      if (/MicroMessenger/i.test(ua)) return 'WeChat'; // 微信
+      if (/wxwork/i.test(ua)) return 'WeCom'; // 企业微信
+      if (/DingTalk/i.test(ua)) return 'DingTalk'; // 钉钉
+      if (/Lark/i.test(ua)) return 'Lark'; // 飞书
+      if (/QQ\//i.test(ua) || /QQBrowser/i.test(ua)) return 'QQ'; // QQ
+      if (/Weibo/i.test(ua)) return 'Weibo'; // 微博
+      if (/AlipayClient/i.test(ua)) return 'Alipay'; // 支付宝
+      if (/Telegram/i.test(ua)) return 'Telegram'; // 电报
+      if (/baiduboxapp/i.test(ua)) return 'BaiduApp'; // 百度App
+      if (/NewsArticle|Toutiao/i.test(ua)) return 'Toutiao'; // 今日头条
+      if (/Aweme/i.test(ua)) return 'Douyin'; // 抖音
+      if (/XiaoHongShu/i.test(ua)) return 'XiaoHongShu'; // 小红书
+      if (/Kwai/i.test(ua)) return 'Kuaishou'; // 快手
+      if (/FBAV/i.test(ua)) return 'Facebook'; // Facebook内嵌
+      if (/Instagram/i.test(ua)) return 'Instagram'; // Instagram内嵌
+      if (/Twitter/i.test(ua)) return 'Twitter'; // Twitter内嵌
+      // 国产及小众浏览器
+      if (/HuaweiBrowser/i.test(ua)) return 'Huawei'; // 华为浏览器
+      if (/HarmonyOS/i.test(ua)) return 'HarmonyOS'; // 鸿蒙
+      if (/MiuiBrowser/i.test(ua)) return 'Miui'; // 小米
+      if (/HeyTapBrowser/i.test(ua)) return 'OPPO'; // OPPO
+      if (/VivoBrowser/i.test(ua)) return 'Vivo'; // Vivo
+      if (/SamsungBrowser/i.test(ua)) return 'Samsung'; // 三星
+      if (/Maxthon/i.test(ua)) return 'Maxthon'; // 遨游
+      if (/LieBaoFast/i.test(ua)) return 'Liebao'; // 猎豹
+      if (/2345Explorer/i.test(ua)) return '2345'; // 2345浏览器
+      if (/UCWEB/i.test(ua)) return 'UCWEB'; // UCWEB
+      if (/UCBrowser/i.test(ua)) return 'UC'; // UC浏览器
+      if (/Opera Mini/i.test(ua)) return 'Opera Mini'; // Opera Mini
+      if (/QihooBrowser|QHBrowser/i.test(ua)) return '360'; // 360浏览器
+      if (/SogouMobileBrowser/i.test(ua)) return 'Sogou'; // 搜狗浏览器
+      // Edge 细分
+      if (/Edg\//i.test(ua)) return 'Edge (Chromium)'; // 新版Edge
+      if (ua.includes('Edge')) return 'Edge'; // 旧版Edge
+      if (ua.includes('OPR') || ua.includes('Opera')) return 'Opera';
+      if (ua.includes('Chrome')) return 'Chrome';
+      if (ua.includes('Firefox')) return 'Firefox';
+      if (ua.includes('Safari') && !ua.includes('Chrome')) {
+        if (/iPhone|iPad|iPod/i.test(ua)) return 'Safari (iOS)';
+        if (/Macintosh/i.test(ua)) return 'Safari (macOS)';
+        if (/Vision/i.test(ua)) return 'Safari (visionOS)';
+        return 'Safari';
+      }
+      return 'Unknown';
+    }
+  })(); 

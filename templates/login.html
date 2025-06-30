@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - 统计系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .glass-effect { backdrop-filter: blur(10px); background: rgba(255,255,255,0.1); }
+        .card-hover { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+        <!-- 登录卡片 -->
+        <div class="bg-white rounded-2xl shadow-2xl p-8 card-hover">
+            <!-- Logo -->
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-chart-line text-white text-2xl"></i>
+                </div>
+                <h1 class="text-3xl font-bold text-gray-900">统计系统</h1>
+                <p class="text-gray-600 mt-2">专业的网站访问统计平台</p>
+            </div>
+
+            <!-- 演示账号信息 -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div class="flex items-center">
+                    <i class="fas fa-info-circle text-blue-500 mr-2"></i>
+                    <span class="text-sm font-medium text-blue-800">演示账号</span>
+                </div>
+                <div class="mt-2 text-sm text-blue-700">
+                    <div>用户名: <span class="font-mono">admin</span></div>
+                    <div>密码: <span class="font-mono">admin123</span></div>
+                </div>
+            </div>
+
+            <!-- 登录表单 -->
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-user mr-2"></i>用户名或邮箱
+                    </label>
+                    <input type="text" id="username" 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                           placeholder="请输入用户名或邮箱" required>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-lock mr-2"></i>密码
+                    </label>
+                    <div class="relative">
+                        <input type="password" id="password" 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors pr-12"
+                               placeholder="请输入密码" required>
+                        <button type="button" onclick="togglePassword()" 
+                                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-eye" id="passwordToggle"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="remember" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <span class="ml-2 text-sm text-gray-600">记住我</span>
+                    </label>
+                    <a href="#" class="text-sm text-blue-600 hover:text-blue-800">忘记密码？</a>
+                </div>
+
+                <button type="submit" 
+                        class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105">
+                    <i class="fas fa-sign-in-alt mr-2"></i>登录
+                </button>
+            </form>
+
+            <!-- 其他链接 -->
+            <div class="mt-6 text-center">
+                <p class="text-sm text-gray-600">
+                    还没有账号？ 
+                    <a href="#" onclick="showRegisterModal()" class="text-blue-600 hover:text-blue-800 font-medium">立即注册</a>
+                </p>
+            </div>
+
+            <!-- 快速链接 -->
+            <div class="mt-6 pt-6 border-t border-gray-200">
+                <div class="flex justify-center space-x-4">
+                    <a href="/report" class="text-sm text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-chart-bar mr-1"></i>查看报表
+                    </a>
+                    <a href="/docs" class="text-sm text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-book mr-1"></i>使用文档
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 页脚 -->
+        <div class="text-center mt-8">
+            <p class="text-white text-sm opacity-80">
+                © 2024 统计系统. 专业的网站访问统计平台
+            </p>
+        </div>
+    </div>
+
+    <!-- 注册模态框 -->
+    <div id="registerModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">用户注册</h2>
+                <button onclick="hideRegisterModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <form id="registerForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">用户名</label>
+                    <input type="text" id="reg-username" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">邮箱</label>
+                    <input type="email" id="reg-email" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">密码</label>
+                    <input type="password" id="reg-password" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">验证码</label>
+                    <div class="flex space-x-2">
+                        <input type="text" id="reg-code" 
+                               class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        <button type="button" onclick="sendVerifyCode()" 
+                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+                            发送验证码
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex space-x-3 pt-4">
+                    <button type="button" onclick="hideRegisterModal()" 
+                            class="flex-1 px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">
+                        取消
+                    </button>
+                    <button type="submit" 
+                            class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        注册
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 通知组件 -->
+    <div id="notification" class="fixed top-4 right-4 z-50 hidden">
+        <div class="bg-white rounded-lg shadow-lg p-4 max-w-sm">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i id="notification-icon" class="fas fa-info-circle text-blue-500"></i>
+                </div>
+                <div class="ml-3">
+                    <p id="notification-message" class="text-sm font-medium text-gray-900"></p>
+                </div>
+                <div class="ml-auto pl-3">
+                    <button onclick="hideNotification()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 登录表单提交
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const remember = document.getElementById('remember').checked;
+            
+            // 显示加载状态
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>登录中...';
+            submitBtn.disabled = true;
+            
+            fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 保存token
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    // 如果选择记住我，设置cookie
+                    if (remember) {
+                        document.cookie = `token=${data.token};path=/;max-age=604800`; // 7天
+                    }
+                    
+                    showNotification('登录成功！正在跳转...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/admin/dashboard';
+                    }, 1000);
+                } else {
+                    showNotification(data.message || '登录失败', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('网络错误，请稍后重试', 'error');
+            })
+            .finally(() => {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            });
+        });
+
+        // 注册表单提交
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('reg-username').value;
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const code = document.getElementById('reg-code').value;
+            
+            fetch('/api/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: username,
+                    email: email,
+                    password: password,
+                    code: code
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('注册成功！请登录', 'success');
+                    hideRegisterModal();
+                    document.getElementById('registerForm').reset();
+                } else {
+                    showNotification(data.message || '注册失败', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('网络错误', 'error');
+            });
+        });
+
+        // 发送验证码
+        function sendVerifyCode() {
+            const email = document.getElementById('reg-email').value;
+            if (!email) {
+                showNotification('请先输入邮箱地址', 'warning');
+                return;
+            }
+            
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = '发送中...';
+            btn.disabled = true;
+            
+            fetch('/api/auth/verify-code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    email: email,
+                    type: 'register'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('验证码已发送到邮箱', 'success');
+                    // 倒计时60秒
+                    let countdown = 60;
+                    const timer = setInterval(() => {
+                        btn.textContent = `${countdown}秒后重发`;
+                        countdown--;
+                        if (countdown < 0) {
+                            clearInterval(timer);
+                            btn.textContent = originalText;
+                            btn.disabled = false;
+                        }
+                    }, 1000);
+                } else {
+                    showNotification(data.message || '发送失败', 'error');
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('网络错误', 'error');
+                btn.textContent = originalText;
+                btn.disabled = false;
+            });
+        }
+
+        // 切换密码显示
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = document.getElementById('passwordToggle');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.className = 'fas fa-eye-slash';
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.className = 'fas fa-eye';
+            }
+        }
+
+        // 显示注册模态框
+        function showRegisterModal() {
+            document.getElementById('registerModal').classList.remove('hidden');
+        }
+
+        // 隐藏注册模态框
+        function hideRegisterModal() {
+            document.getElementById('registerModal').classList.add('hidden');
+            document.getElementById('registerForm').reset();
+        }
+
+        // 通知系统
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            const messageEl = document.getElementById('notification-message');
+            const iconEl = document.getElementById('notification-icon');
+            
+            messageEl.textContent = message;
+            
+            const icons = {
+                success: 'fas fa-check-circle text-green-500',
+                error: 'fas fa-exclamation-circle text-red-500',
+                warning: 'fas fa-exclamation-triangle text-yellow-500',
+                info: 'fas fa-info-circle text-blue-500'
+            };
+            
+            iconEl.className = icons[type] || icons.info;
+            notification.classList.remove('hidden');
+            
+            setTimeout(() => {
+                hideNotification();
+            }, 3000);
+        }
+
+        function hideNotification() {
+            document.getElementById('notification').classList.add('hidden');
+        }
+
+        // 页面加载时检查是否已登录
+        document.addEventListener('DOMContentLoaded', function() {
+            // 检查是否需要清除token
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('clear_token') === 'true') {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                // 清除cookie
+                document.cookie = 'token=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT';
+                return;
+            }
+            
+            // 如果已经在登录页，不要自动跳转，避免死循环
+            // 只有在其他页面才检查token并跳转
+            if (window.location.pathname !== '/login') {
+                const token = localStorage.getItem('token');
+                if (token) {
+                    // 验证token有效性
+                    fetch('/api/user/profile', {
+                        headers: {
+                            'Authorization': 'Bearer ' + token
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            window.location.href = '/admin/dashboard';
+                        }
+                    })
+                    .catch(() => {
+                        // Token无效，清除
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('user');
+                    });
+                }
+            }
+        });
+    </script>
+</body>
+</html> 

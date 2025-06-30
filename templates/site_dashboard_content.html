@@ -1,0 +1,1008 @@
+{{define "site_dashboard_content"}}
+<!-- 
+    站点仪表盘内容模板
+    
+    功能说明：
+    1. 显示站点核心统计数据（PV、UV、停留时长、页面数量）
+    2. 展示PV趋势图表和热门页面排行
+    3. 显示设备、地区、浏览器分布统计
+    4. 实时访问数据展示
+    
+    数据来源：
+    - /api/stat/dashboard - 核心统计数据
+    - /api/stat/popular-pages - 热门页面
+    - /api/stat/realtime - 实时访问数据
+    - /api/stat/distribution - 分布统计数据
+    
+    更新频率：
+    - 核心数据：30秒
+    - 实时数据：10秒
+    - 分布数据：60秒
+    
+    作者：统计系统
+    版本：1.0
+-->
+
+<!-- content-area 主区域最前面，三卡片并排 -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 w-full">
+    <!-- 热门页面 -->
+    <div class="bg-white rounded-lg shadow-sm p-6 col-span-1 h-full flex flex-col">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">热门页面</h3>
+        <div class="space-y-3" id="popular-pages">
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div class="flex items-center">
+                    <div class="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                    <span class="text-sm text-gray-700">加载中...</span>
+                </div>
+                <span class="text-sm font-medium text-gray-900">-</span>
+            </div>
+        </div>
+    </div>
+    <!-- 热门设备 -->
+    <div class="bg-white rounded-lg shadow-sm p-6 col-span-1 h-full flex flex-col">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">热门设备</h3>
+        <div id="popular-devices"></div>
+    </div>
+    <!-- 热门城市 -->
+    <div class="bg-white rounded-lg shadow-sm p-6 col-span-1 h-full flex flex-col">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">热门城市</h3>
+        <div id="popular-cities"></div>
+    </div>
+</div>
+
+<!-- 统计卡片 -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <div class="bg-white rounded-lg shadow-sm p-6 card-hover">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-blue-100">
+                <i class="fas fa-eye text-blue-600 text-xl"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">今日PV</p>
+                <p class="text-2xl font-bold text-gray-900" id="dashboard-today-pv">-</p>
+            </div>
+        </div>
+        <div class="mt-4">
+            <span id="dashboard-pv-trend" class="text-sm text-gray-600">-</span>
+            <span class="text-sm text-gray-500 ml-2">较昨日</span>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm p-6 card-hover">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-green-100">
+                <i class="fas fa-users text-green-600 text-xl"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">今日UV</p>
+                <p class="text-2xl font-bold text-gray-900" id="dashboard-today-uv">-</p>
+            </div>
+        </div>
+        <div class="mt-4">
+            <span id="dashboard-uv-trend" class="text-sm text-gray-600">-</span>
+            <span class="text-sm text-gray-500 ml-2">较昨日</span>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm p-6 card-hover">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-purple-100">
+                <i class="fas fa-clock text-purple-600 text-xl"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">平均停留</p>
+                <p class="text-2xl font-bold text-gray-900" id="dashboard-avg-duration">-</p>
+            </div>
+        </div>
+        <div class="mt-4">
+            <span class="text-sm text-gray-500">今日平均</span>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm p-6 card-hover">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-orange-100">
+                <i class="fas fa-file-alt text-orange-600 text-xl"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-600">页面数量</p>
+                <p class="text-2xl font-bold text-gray-900" id="dashboard-page-count">-</p>
+            </div>
+        </div>
+        <div class="mt-4">
+            <span class="text-sm text-gray-500">个页面</span>
+        </div>
+    </div>
+</div>
+
+<!-- 图表区域 -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- 世界访问热力图 -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">世界访问热力图</h3>
+        <div id="worldMap" style="height: 300px; width: 100%; min-width: 0; overflow: hidden;"></div>
+    </div>
+    <!-- 城市访问热力图 -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">中国省份热力图</h3>
+        <div id="provinceMap" style="height: 300px; width: 100%; min-width: 0; overflow: hidden;"></div>
+        <div class="mt-4">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead>
+                    <tr>
+                        <th class="px-2 py-1 text-left">排名</th>
+                        <th class="px-2 py-1 text-left">省份</th>
+                        <th class="px-2 py-1 text-right">访问量</th>
+                        <th class="px-2 py-1 text-right">占比</th>
+                    </tr>
+                </thead>
+                <tbody id="regionTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 分布统计图表 -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <!-- 设备分布 -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">设备分布</h3>
+        <div id="deviceChart" style="height: 250px;"></div>
+    </div>
+
+    <!-- 地区分布 -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">地区分布</h3>
+        <div id="regionChart" style="height: 250px;"></div>
+    </div>
+
+    <!-- 浏览器分布 -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">浏览器分布</h3>
+        <div id="browserChart" style="height: 250px;"></div>
+    </div>
+</div>
+
+<!-- 实时数据 -->
+<div class="bg-white rounded-lg shadow-sm p-6">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">实时访问</h3>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">时间</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">页面</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">停留时长</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP地址</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">地区</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">设备</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">浏览器</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">来源</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200" id="realtime-data">
+                <tr>
+                    <td colspan="8" class="px-6 py-4 text-center text-gray-500">暂无实时数据</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 引入省份对照表 -->
+<script src="/static/js/china_provinces_en_cn.js"></script>
+<!-- 引入城市对照表 -->
+<script src="/static/js/china_cities_en_cn.js"></script>
+
+<script>
+    let pvChart, deviceChart, regionChart, browserChart, cityMapChart, worldMapChart, provinceMapChart;
+    const siteId = '{{.SiteId}}';
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Page loaded, siteId:', siteId);
+        console.log('Token:', localStorage.getItem('token'));
+        
+        // 测试API连接
+        testAPIConnection();
+        
+        // 先初始化图表，再加载数据
+        setTimeout(function() {
+            initWorldMapChart();
+            initProvinceMapChart();
+            initDeviceChart();
+            initRegionChart();
+            initBrowserChart();
+            
+            // 图表初始化完成后再加载数据
+            loadDashboardData();
+            loadPopularPages();
+            loadRealtimeData();
+            loadDistributionData();
+        }, 200);
+        
+        // 每30秒刷新一次数据
+        setInterval(loadDashboardData, 30000);
+        setInterval(loadRealtimeData, 10000);
+        setInterval(loadDistributionData, 60000);
+    });
+
+    // 测试API连接
+    function testAPIConnection() {
+        fetch('/api/stat/report', {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(response => {
+            console.log('API test response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('API test data:', data);
+        })
+        .catch(error => {
+            console.error('API test error:', error);
+        });
+    }
+
+    // 加载仪表盘数据
+    function loadDashboardData() {
+        console.log('Loading dashboard data for site:', siteId);
+        fetch('/api/stat/dashboard?site_id=' + siteId, {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(response => {
+            console.log('Dashboard response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Dashboard data:', data);
+            if (data.success) {
+                updateStats(data.data);
+            } else {
+                console.error('Dashboard error:', data.message);
+                showNotification(data.message || '加载数据失败', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Dashboard fetch error:', error);
+            showNotification('网络错误', 'error');
+        });
+    }
+
+    // 更新统计数据
+    function updateStats(data) {
+        console.log('Updating stats with data:', data);
+        
+        const todayPvElement = document.getElementById('dashboard-today-pv');
+        const todayUvElement = document.getElementById('dashboard-today-uv');
+        const avgDurationElement = document.getElementById('dashboard-avg-duration');
+        const pageCountElement = document.getElementById('dashboard-page-count');
+        
+        if (todayPvElement) {
+            todayPvElement.textContent = data.today_pv || 0;
+            console.log('Updated today-pv:', data.today_pv || 0);
+            console.log('Element content after update:', todayPvElement.textContent);
+            console.log('Element visible:', todayPvElement.offsetParent !== null);
+        } else {
+            console.error('Element today-pv not found');
+        }
+        
+        if (todayUvElement) {
+            todayUvElement.textContent = data.today_uv || 0;
+            console.log('Updated today-uv:', data.today_uv || 0);
+            console.log('Element content after update:', todayUvElement.textContent);
+            console.log('Element visible:', todayUvElement.offsetParent !== null);
+        } else {
+            console.error('Element today-uv not found');
+        }
+        
+        if (avgDurationElement) {
+            avgDurationElement.textContent = data.avg_duration || 0;
+            console.log('Updated avg-duration:', data.avg_duration || 0);
+            console.log('Element content after update:', avgDurationElement.textContent);
+            console.log('Element visible:', avgDurationElement.offsetParent !== null);
+        } else {
+            console.error('Element avg-duration not found');
+        }
+        
+        if (pageCountElement) {
+            pageCountElement.textContent = data.page_count || 0;
+            console.log('Updated page-count:', data.page_count || 0);
+            console.log('Element content after update:', pageCountElement.textContent);
+            console.log('Element visible:', pageCountElement.offsetParent !== null);
+        } else {
+            console.error('Element page-count not found');
+        }
+        
+        // 更新趋势
+        updateTrend('dashboard-pv-trend', data.pv_trend);
+        updateTrend('dashboard-uv-trend', data.uv_trend);
+    }
+
+    // 更新趋势显示
+    function updateTrend(elementId, trend) {
+        const element = document.getElementById(elementId);
+        if (trend > 0) {
+            element.innerHTML = '<i class="fas fa-arrow-up mr-1"></i>' + trend + '%';
+            element.className = 'text-sm text-green-600';
+        } else if (trend < 0) {
+            element.innerHTML = '<i class="fas fa-arrow-down mr-1"></i>' + Math.abs(trend) + '%';
+            element.className = 'text-sm text-red-600';
+        } else {
+            element.innerHTML = '<i class="fas fa-minus mr-1"></i>0%';
+            element.className = 'text-sm text-gray-600';
+        }
+    }
+
+    // 加载热门页面
+    function loadPopularPages() {
+        fetch('/api/stat/popular-pages?site_id=' + siteId, {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updatePopularPages(data.data);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+        // 同时加载热门设备和热门城市
+        fetch('/api/stat/popular-devices?site_id=' + siteId, {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updatePopularDevices(data.data);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+        fetch('/api/stat/popular-cities?site_id=' + siteId, {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updatePopularCities(data.data);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    // 更新热门页面
+    function updatePopularPages(pages) {
+        const container = document.getElementById('popular-pages');
+        if (pages && pages.length > 0) {
+            container.innerHTML = pages.map(function(page, index) {
+                const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-red-500'];
+                return '<div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">' +
+                    '<div class="flex items-center">' +
+                        '<div class="w-2 h-2 ' + colors[index % colors.length] + ' rounded-full mr-3"></div>' +
+                        '<span class="text-sm text-gray-700">' + (page.path || page.url || '未知页面') + '</span>' +
+                    '</div>' +
+                    '<span class="text-sm font-medium text-gray-900">' + (page.count || 0) + '</span>' +
+                '</div>';
+            }).join('');
+        } else {
+            container.innerHTML = '<div class="text-center text-gray-500 py-4">暂无数据</div>';
+        }
+    }
+
+    // 渲染热门设备
+    function updatePopularDevices(devices) {
+        const container = document.getElementById('popular-devices');
+        if (!devices || devices.length === 0) {
+            container.innerHTML = '<div class="text-center text-gray-500 py-4">暂无数据</div>';
+            return;
+        }
+        const top = devices.slice(0, 10);
+        container.innerHTML = top.map((item, idx) => `
+            <div class="flex items-center justify-between p-2">
+                <span class="text-sm text-gray-700">${idx + 1}. ${item.device || '-'}</span>
+                <span class="text-sm font-medium text-gray-900">${item.count || 0}</span>
+            </div>
+        `).join('');
+    }
+
+    // 渲染热门城市
+    function updatePopularCities(cities) {
+        const container = document.getElementById('popular-cities');
+        if (!cities || cities.length === 0) {
+            container.innerHTML = '<div class="text-center text-gray-500 py-4">暂无数据</div>';
+            return;
+        }
+        const top = cities.slice(0, 10);
+        container.innerHTML = top.map((item, idx) => `
+            <div class="flex items-center justify-between p-2">
+                <span class="text-sm text-gray-700">${idx + 1}. ${item.city || '-'}</span>
+                <span class="text-sm font-medium text-gray-900">${item.count || 0}</span>
+            </div>
+        `).join('');
+    }
+
+    // 加载分布数据
+    function loadDistributionData() {
+        console.log('Loading distribution data for site:', siteId);
+        fetch('/api/stat/distribution?site_id=' + siteId, {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(response => {
+            console.log('Distribution response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Distribution data:', data);
+            if (data.success) {
+                console.log('Device distribution:', data.data.device_distribution);
+                console.log('Region distribution:', data.data.region_distribution);
+                console.log('Browser distribution:', data.data.browser_distribution);
+
+                updateWorldMapChart(data.data.country_distribution || []);
+                updateProvinceMapChart(data.data.region_distribution);
+                updateDeviceChart(data.data.device_distribution);
+                updateRegionChart(data.data.city_distribution);
+                updateRegionTable(data.data.region_distribution);
+                updateBrowserChart(data.data.browser_distribution);
+            } else {
+                console.error('Distribution error:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Distribution fetch error:', error);
+        });
+    }
+
+    // 初始化设备分布图
+    function initDeviceChart() {
+        console.log('Initializing device chart...');
+        const chartDom = document.getElementById('deviceChart');
+        if (!chartDom) {
+            console.error('deviceChart container not found');
+            return;
+        }
+        deviceChart = echarts.init(chartDom);
+        console.log('Device chart initialized');
+        
+        const colors = [
+            '#3B82F6', '#10B981', '#F59E0B', '#EF4444', 
+            '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'
+        ];
+        
+        const option = {
+            tooltip: {
+                trigger: 'item',
+                formatter: '{a} <br/>{b}: {c} ({d}%)'
+            },
+            color: colors,
+            series: [{
+                name: '设备类型',
+                type: 'pie',
+                radius: ['40%', '70%'],
+                center: ['50%', '50%'],
+                data: [],
+                emphasis: {
+                    itemStyle: {
+                        shadowBlur: 10,
+                        shadowOffsetX: 0,
+                        shadowColor: 'rgba(0, 0, 0, 0.5)'
+                    }
+                }
+            }]
+        };
+        
+        deviceChart.setOption(option);
+        console.log('Device chart option set');
+        
+        window.addEventListener('resize', function() {
+            if (deviceChart) {
+                deviceChart.resize();
+            }
+        });
+    }
+
+    // 更新设备分布图
+    function updateDeviceChart(data) {
+        console.log('updateDeviceChart called with data:', data);
+        if (!deviceChart) {
+            console.error('deviceChart not initialized');
+            return;
+        }
+        
+        const chartData = data.map(item => ({
+            name: item.device || '未知',
+            value: item.count
+        }));
+        
+        console.log('Device chart data:', chartData);
+        
+        deviceChart.setOption({
+            series: [{
+                data: chartData
+            }]
+        });
+        
+        console.log('Device chart updated');
+    }
+
+    // 初始化地区分布图表
+    function initRegionChart() {
+        console.log('Initializing region chart...');
+        const chartDom = document.getElementById('regionChart');
+        if (!chartDom) {
+            console.error('regionChart container not found');
+            return;
+        }
+        regionChart = echarts.init(chartDom);
+        console.log('Region chart initialized');
+        
+        const colors = [
+            '#3B82F6', '#10B981', '#F59E0B', '#EF4444', 
+            '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'
+        ];
+        
+        const option = {
+            tooltip: {
+                trigger: 'item',
+                formatter: '{a} <br/>{b}: {c} ({d}%)'
+            },
+            color: colors,
+            series: [{
+                name: '城市',
+                type: 'pie',
+                radius: ['40%', '70%'],
+                center: ['50%', '50%'],
+                data: [],
+                emphasis: {
+                    itemStyle: {
+                        shadowBlur: 10,
+                        shadowOffsetX: 0,
+                        shadowColor: 'rgba(0, 0, 0, 0.5)'
+                    }
+                }
+            }]
+        };
+        
+        regionChart.setOption(option);
+        console.log('Region chart option set');
+        
+        window.addEventListener('resize', function() {
+            if (regionChart) {
+                regionChart.resize();
+            }
+        });
+    }
+
+    // 更新地区分布图（改为城市热力数据 city_distribution）
+    function updateRegionChart(data) {
+        console.log('updateRegionChart called with data:', data);
+        if (!regionChart) {
+            console.error('regionChart not initialized');
+            return;
+        }
+        if (!data) data = [];
+        // 只取前10城市
+        const sorted = data.slice().sort((a, b) => b.count - a.count).slice(0, 10);
+        const chartData = sorted.map(item => ({
+            name: item.city || '未知',
+            value: item.count || 0
+        }));
+        console.log('Region chart data:', chartData);
+        regionChart.setOption({
+            series: [{
+                data: chartData
+            }]
+        });
+        console.log('Region chart updated');
+    }
+
+    // 地区分布表格（省份热力数据）
+    function updateRegionTable(regionData) {
+        const tbody = document.getElementById('regionTableBody');
+        if (!regionData || regionData.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-gray-400">暂无数据</td></tr>';
+            return;
+        }
+        // 排序
+        const sorted = regionData.slice().sort((a, b) => b.count - a.count);
+        const total = sorted.reduce((sum, item) => sum + (item.count || 0), 0);
+        // 省份名映射
+        const fixProvinceName = name => {
+            if (!name) return '未知';
+            if (typeof chinaProvincesEnCn !== 'undefined' && chinaProvincesEnCn[name]) {
+                return chinaProvincesEnCn[name] + '省';
+            }
+            if (name.endsWith('省') || name.endsWith('市') || name.endsWith('自治区')) return name;
+            return name + '省';
+        };
+        tbody.innerHTML = sorted.map((item, idx) => `
+            <tr>
+                <td class="px-2 py-1">${idx + 1}</td>
+                <td class="px-2 py-1">${fixProvinceName(item.province)}</td>
+                <td class="px-2 py-1 text-right">${item.count || 0}</td>
+                <td class="px-2 py-1 text-right">${total ? ((item.count / total * 100).toFixed(1) + '%') : '-'}</td>
+            </tr>
+        `).join('');
+    }
+
+    // 初始化浏览器分布图
+    function initBrowserChart() {
+        console.log('Initializing browser chart...');
+        const chartDom = document.getElementById('browserChart');
+        if (!chartDom) {
+            console.error('browserChart container not found');
+            return;
+        }
+        browserChart = echarts.init(chartDom);
+        console.log('Browser chart initialized');
+        
+        const colors = [
+            '#3B82F6', '#10B981', '#F59E0B', '#EF4444', 
+            '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'
+        ];
+        
+        const option = {
+            tooltip: {
+                trigger: 'item',
+                formatter: '{a} <br/>{b}: {c} ({d}%)'
+            },
+            color: colors,
+            series: [{
+                name: '浏览器',
+                type: 'pie',
+                radius: ['40%', '70%'],
+                center: ['50%', '50%'],
+                data: [],
+                emphasis: {
+                    itemStyle: {
+                        shadowBlur: 10,
+                        shadowOffsetX: 0,
+                        shadowColor: 'rgba(0, 0, 0, 0.5)'
+                    }
+                }
+            }]
+        };
+        
+        browserChart.setOption(option);
+        console.log('Browser chart option set');
+        
+        window.addEventListener('resize', function() {
+            if (browserChart) {
+                browserChart.resize();
+            }
+        });
+    }
+
+    // 更新浏览器分布图
+    function updateBrowserChart(data) {
+        console.log('updateBrowserChart called with data:', data);
+        if (!browserChart) {
+            console.error('browserChart not initialized');
+            return;
+        }
+        
+        const chartData = data.map(item => ({
+            name: item.browser || '未知',
+            value: item.count
+        }));
+        
+        console.log('Browser chart data:', chartData);
+        
+        browserChart.setOption({
+            series: [{
+                data: chartData
+            }]
+        });
+        
+        console.log('Browser chart updated');
+    }
+
+    // 简化设备信息
+    function simplifyDevice(ua) {
+        if (!ua) return '-';
+        
+        // 检测移动设备
+        if (ua.includes('Mobile') || ua.includes('iPhone') || ua.includes('Android')) {
+            if (ua.includes('iPhone')) return 'iPhone';
+            if (ua.includes('iPad')) return 'iPad';
+            if (ua.includes('Android')) return 'Android';
+            return 'Mobile';
+        }
+        
+        // 检测桌面浏览器
+        if (ua.includes('Chrome')) return 'Chrome';
+        if (ua.includes('Firefox')) return 'Firefox';
+        if (ua.includes('Safari') && !ua.includes('Chrome')) return 'Safari';
+        if (ua.includes('Edge')) return 'Edge';
+        if (ua.includes('Opera')) return 'Opera';
+        
+        return 'Desktop';
+    }
+
+    // 加载实时数据
+    function loadRealtimeData() {
+        fetch('/api/stat/realtime?site_id=' + siteId, {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateRealtimeData(data.data);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    // 更新实时数据
+    function updateRealtimeData(data) {
+        const tbody = document.getElementById('realtime-data');
+        if (data && data.length > 0) {
+            tbody.innerHTML = data.map(function(item) {
+
+                // 处理停留时长显示
+                const duration = item.duration || '0秒';
+                
+                // 处理设备信息显示
+                const device = item.device || '-';
+                
+                // 处理浏览器信息
+                const browser = item.browser || '-';
+                
+                // 处理来源信息
+                const referer = item.referer || '-';
+                
+                return '<tr>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + formatTime(item.created_at) + '</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + (item.path || '-') + '</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">' + duration + '</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' + (item.ip || '-') + '</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' + (item.location || '-') + '</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' + device + '</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' + browser + '</td>' +
+                    '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate" title="' + referer + '">' + referer + '</td>' +
+                '</tr>';
+            }).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">暂无实时数据</td></tr>';
+        }
+    }
+
+    // 格式化时间
+    function formatTime(timeString) {
+        const date = new Date(timeString);
+        return date.toLocaleString('zh-CN', {
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    }
+
+    // 初始化省份地图热力图
+    function initProvinceMapChart() {
+        const chartDom = document.getElementById('provinceMap');
+        if (!chartDom) {
+            console.error('provinceMap container not found');
+            return;
+        }
+        provinceMapChart = echarts.init(chartDom);
+        fetch('/static/geo/china.json')
+            .then(res => res.json())
+            .then(geoJson => {
+                echarts.registerMap('china', geoJson);
+                const option = {
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: function(params) {
+                            if (params.value !== undefined) {
+                                return params.name + '<br/>访问量: ' + params.value;
+                            }
+                            return params.name;
+                        }
+                    },
+                    visualMap: {
+                        min: 0,
+                        max: 100,
+                        left: 'left',
+                        top: 'bottom',
+                        text: ['高','低'],
+                        calculable: true,
+                        inRange: {
+                            color: ['#e0f3ff', '#1890ff', '#0050b3']
+                        }
+                    },
+                    series: [{
+                        name: '访问量',
+                        type: 'map',
+                        map: 'china',
+                        roam: 'move',
+                        zoom: 1.2,
+                        center: [105, 36],
+                        emphasis: {
+                            label: { 
+                                show: true,
+                                fontSize: 12
+                            },
+                            itemStyle: {
+                                areaColor: '#ffd700',
+                                shadowOffsetX: 0,
+                                shadowOffsetY: 0,
+                                shadowBlur: 20,
+                                borderWidth: 0,
+                                shadowColor: 'rgba(0, 0, 0, 0.5)'
+                            }
+                        },
+                        itemStyle: {
+                            borderColor: '#fff',
+                            borderWidth: 1,
+                            areaColor: '#f0f0f0'
+                        },
+                        data: []
+                    }]
+                };
+                provinceMapChart.setOption(option);
+                window.addEventListener('resize', function() {
+                    if (provinceMapChart) provinceMapChart.resize();
+                });
+            })
+            .catch(error => {
+                console.error('Failed to load province map:', error);
+                chartDom.innerHTML = '<div class="flex items-center justify-center h-full text-red-500">省份地图加载失败，请检查网络连接</div>';
+            });
+    }
+
+    // 更新省份地图热力图
+    function updateProvinceMapChart(data) {
+        if (!provinceMapChart) {
+            console.log('Province map chart not initialized, initializing...');
+            initProvinceMapChart();
+            return;
+        }
+        if (!data || data.length === 0) {
+            data = [];
+        }
+        // 省名兼容处理，使用英文-中文映射表
+        const fixProvinceName = name => {
+            if (!name) return '未知';
+            if (typeof chinaProvincesEnCn !== 'undefined' && chinaProvincesEnCn[name]) {
+                return chinaProvincesEnCn[name] + '省';
+            }
+            if (name.endsWith('省') || name.endsWith('市') || name.endsWith('自治区')) return name;
+            return name + '省';
+        };
+        const chartData = data.map(item => ({
+            name: fixProvinceName(item.province),
+            value: Number(item.count) || 0
+        }));
+        const maxValue = chartData.length > 0 ? Math.max(10, ...chartData.map(d => d.value)) : 10;
+        provinceMapChart.setOption({
+            visualMap: { max: maxValue },
+            series: [{ data: chartData }]
+        });
+    }
+
+    // 初始化世界地图热力图
+    function initWorldMapChart() {
+        const chartDom = document.getElementById('worldMap');
+        if (!chartDom) {
+            console.error('worldMap container not found');
+            return;
+        }
+        worldMapChart = echarts.init(chartDom);
+        fetch('/static/geo/world.json')
+            .then(res => res.json())
+            .then(geoJson => {
+                echarts.registerMap('world', geoJson);
+                const option = {
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: function(params) {
+                            if (params.value !== undefined) {
+                                return params.name + '<br/>访问量: ' + params.value;
+                            }
+                            return params.name;
+                        }
+                    },
+                    visualMap: {
+                        min: 0,
+                        max: 100,
+                        left: 'left',
+                        top: 'bottom',
+                        text: ['高','低'],
+                        calculable: true,
+                        inRange: {
+                            color: ['#e0f3ff', '#1890ff', '#0050b3']
+                        }
+                    },
+                    series: [{
+                        name: '访问量',
+                        type: 'map',
+                        map: 'world',
+                        roam: 'move',
+                        emphasis: {
+                            label: { show: true, fontSize: 12 },
+                            itemStyle: {
+                                areaColor: '#ffd700',
+                                shadowBlur: 20,
+                                borderWidth: 0,
+                                shadowColor: 'rgba(0,0,0,0.5)'
+                            }
+                        },
+                        itemStyle: {
+                            borderColor: '#fff',
+                            borderWidth: 1,
+                            areaColor: '#f0f0f0'
+                        },
+                        data: []
+                    }]
+                };
+                worldMapChart.setOption(option);
+                window.addEventListener('resize', function() {
+                    if (worldMapChart) worldMapChart.resize();
+                });
+            })
+            .catch(error => {
+                console.error('Failed to load world map:', error);
+                chartDom.innerHTML = '<div class="flex items-center justify-center h-full text-red-500">世界地图加载失败</div>';
+            });
+    }
+
+    // 更新世界地图热力图
+    function updateWorldMapChart(data) {
+        if (!worldMapChart) {
+            initWorldMapChart();
+            return;
+        }
+        if (!data || data.length === 0) {
+            data = [];
+        }
+        const chartData = data.map(item => ({
+            name: item.country || '未知',
+            value: item.count || 0
+        }));
+        const maxValue = chartData.length > 0 ? Math.max(10, ...chartData.map(d => d.value)) : 10;
+        worldMapChart.setOption({
+            visualMap: {
+                max: maxValue,
+                inRange: {
+                    color: ['#e0f3ff', '#1890ff', '#0050b3']
+                }
+            },
+            series: [{
+                data: chartData,
+                emphasis: {
+                    label: { show: true, fontSize: 12 },
+                    itemStyle: {
+                        areaColor: '#ffd700',
+                        shadowBlur: 20,
+                        borderWidth: 0,
+                        shadowColor: 'rgba(0,0,0,0.5)'
+                    }
+                }
+            }]
+        });
+    }
+</script>
+{{end}} 

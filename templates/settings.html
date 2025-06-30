@@ -1,0 +1,149 @@
+{{define "settings_content"}}
+<div class="space-y-6">
+    <!-- 页面标题 -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">系统设置</h1>
+            <p class="text-gray-600">管理账户和系统配置</p>
+        </div>
+    </div>
+
+    <!-- 设置选项卡 -->
+    <div class="bg-white rounded-lg shadow-sm">
+        <div class="border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+                <button onclick="showTab('profile')" id="tab-profile" class="tab-button border-b-2 border-blue-500 py-4 px-1 text-sm font-medium text-blue-600">
+                    个人资料
+                </button>
+                <button onclick="showTab('security')" id="tab-security" class="tab-button border-b-2 border-transparent py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700">
+                    安全设置
+                </button>
+                <button onclick="showTab('system')" id="tab-system" class="tab-button border-b-2 border-transparent py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700">
+                    系统配置
+                </button>
+            </nav>
+        </div>
+
+        <!-- 个人资料设置 -->
+        <div id="tab-content-profile" class="tab-content p-6">
+            <form id="profile-form" class="space-y-6">
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">个人信息</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">用户名</label>
+                            <input type="text" id="username" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500" readonly>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">邮箱</label>
+                            <input type="email" id="email" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500" readonly>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">昵称</label>
+                            <input type="text" id="nickname" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">头像</label>
+                            <input type="text" id="avatar" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="头像URL">
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-end">
+                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        保存更改
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- 安全设置 -->
+        <div id="tab-content-security" class="tab-content p-6 hidden">
+            <div class="space-y-6">
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">修改密码</h3>
+                    <form id="password-form" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">当前密码</label>
+                            <input type="password" id="current-password" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">新密码</label>
+                            <input type="password" id="new-password" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">确认新密码</label>
+                            <input type="password" id="confirm-password" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                        </div>
+                        <div class="flex justify-end">
+                            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                                修改密码
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="border-t pt-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">登录会话</h3>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <p class="text-sm text-gray-600 mb-4">当前登录会话将在7天后自动过期，或点击下方按钮立即登出。</p>
+                        <button onclick="logout()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                            立即登出
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 系统配置 -->
+        <div id="tab-content-system" class="tab-content p-6 hidden">
+            <div class="space-y-6">
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">数据统计设置</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="text-sm font-medium text-gray-900">数据保留时间</h4>
+                                <p class="text-sm text-gray-500">设置访问数据的保留期限</p>
+                            </div>
+                            <select id="data-retention" class="border border-gray-300 rounded-md px-3 py-2">
+                                <option value="30">30天</option>
+                                <option value="90">90天</option>
+                                <option value="180">180天</option>
+                                <option value="365">1年</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="text-sm font-medium text-gray-900">实时数据更新</h4>
+                                <p class="text-sm text-gray-500">启用实时数据更新功能</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="realtime-update" class="sr-only peer" checked>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t pt-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">系统信息</h3>
+                    <div class="bg-gray-50 rounded-lg p-4 space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-600">系统版本</span>
+                            <span class="text-sm font-medium text-gray-900">v1.0.0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-600">数据库状态</span>
+                            <span class="text-sm font-medium text-green-600" id="db-status">正常</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-600">运行时间</span>
+                            <span class="text-sm font-medium text-gray-900" id="uptime">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}} 
