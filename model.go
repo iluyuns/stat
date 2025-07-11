@@ -86,7 +86,8 @@ type User struct {
 	Password  string         `json:"-" gorm:"size:128;not null"` // 不返回密码
 	Nickname  string         `json:"nickname" gorm:"size:64"`
 	Avatar    string         `json:"avatar" gorm:"size:255"`
-	Status    int            `json:"status" gorm:"default:1"` // 1:正常 0:禁用
+	Status    int            `json:"status" gorm:"default:1"` // 1:正常 0:禁用 9:超级管理员
+	IsAdmin   bool           `json:"is_admin" gorm:"-"`       // 仅用于返回，超级管理员
 	LastLogin sql.NullTime   `json:"last_login"`
 	CreatedAt time.Time      `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time      `json:"updated_at" gorm:"autoUpdateTime"`

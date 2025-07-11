@@ -305,6 +305,18 @@ func inferEventCategory(eventName string) string {
 
 // 查询统计数据（简单示例：返回今日PV数）
 func GetReport(c *gin.Context) {
+	userID, isAdmin, _ := getCurrentUserAndAdmin(c)
+	siteId := c.Query("site_id")
+	if siteId != "" && !isAdmin {
+		// 校验站点归属
+		var site StatSite
+		if MysqlDB != nil {
+			if err := MysqlDB.Where("site_id = ? AND created_by = ?", siteId, userID).First(&site).Error; err != nil {
+				c.JSON(http.StatusForbidden, gin.H{"success": false, "error": "无权限访问该站点"})
+				return
+			}
+		}
+	}
 	var count int64
 	today := time.Now().Format("2006-01-02")
 	if ClickHouseDB != nil {
@@ -337,9 +349,14 @@ func CreateSite(c *gin.Context) {
 
 // 查询所有统计ID
 func ListSite(c *gin.Context) {
+	userID, isAdmin, _ := getCurrentUserAndAdmin(c)
 	var sites []StatSite
 	if MysqlDB != nil {
-		err := MysqlDB.Find(&sites).Error
+		query := MysqlDB.Model(&StatSite{})
+		if !isAdmin {
+			query = query.Where("created_by = ?", userID)
+		}
+		err := query.Find(&sites).Error
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
 			return
@@ -373,8 +390,16 @@ func ListSite(c *gin.Context) {
 
 // 删除统计ID
 func DeleteSite(c *gin.Context) {
+	userID, isAdmin, _ := getCurrentUserAndAdmin(c)
 	id := c.Param("id")
 	if MysqlDB != nil {
+		if !isAdmin {
+			var site StatSite
+			if err := MysqlDB.Where("site_id = ? AND created_by = ?", id, userID).First(&site).Error; err != nil {
+				c.JSON(http.StatusForbidden, gin.H{"success": false, "error": "无权限删除该站点"})
+				return
+			}
+		}
 		err := MysqlDB.Where("site_id = ?", id).Delete(&StatSite{}).Error
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
@@ -1910,12 +1935,23 @@ func GetDistributionData(c *gin.Context) {
 
 // 站点报表指标API
 func HandleReportMetrics(c *gin.Context) {
+	userID, isAdmin, _ := getCurrentUserAndAdmin(c)
 	siteID := c.Query("site_id")
 	days := c.DefaultQuery("days", "7")
 
 	if siteID == "" {
 		c.JSON(400, gin.H{"success": false, "message": "缺少site_id参数"})
 		return
+	}
+
+	if !isAdmin {
+		var siteCheck StatSite
+		if StatDB != nil {
+			if err := StatDB.Where("site_id = ? AND created_by = ?", siteID, userID).First(&siteCheck).Error; err != nil {
+				c.JSON(http.StatusForbidden, gin.H{"success": false, "error": "无权限操作该站点"})
+				return
+			}
+		}
 	}
 
 	daysInt, err := strconv.Atoi(days)
@@ -1976,12 +2012,23 @@ func HandleReportMetrics(c *gin.Context) {
 
 // 站点报表趋势API
 func HandleReportTrend(c *gin.Context) {
+	userID, isAdmin, _ := getCurrentUserAndAdmin(c)
 	siteID := c.Query("site_id")
 	days := c.DefaultQuery("days", "7")
 
 	if siteID == "" {
 		c.JSON(400, gin.H{"success": false, "message": "缺少site_id参数"})
 		return
+	}
+
+	if !isAdmin {
+		var siteCheck StatSite
+		if StatDB != nil {
+			if err := StatDB.Where("site_id = ? AND created_by = ?", siteID, userID).First(&siteCheck).Error; err != nil {
+				c.JSON(http.StatusForbidden, gin.H{"success": false, "error": "无权限操作该站点"})
+				return
+			}
+		}
 	}
 
 	daysInt, err := strconv.Atoi(days)
@@ -2072,12 +2119,23 @@ func HandleReportHourDistribution(c *gin.Context) {
 
 // 站点报表每日详细数据API
 func HandleReportDailyStats(c *gin.Context) {
+	userID, isAdmin, _ := getCurrentUserAndAdmin(c)
 	siteID := c.Query("site_id")
 	days := c.DefaultQuery("days", "7")
 
 	if siteID == "" {
 		c.JSON(400, gin.H{"success": false, "message": "缺少site_id参数"})
 		return
+	}
+
+	if !isAdmin {
+		var siteCheck StatSite
+		if StatDB != nil {
+			if err := StatDB.Where("site_id = ? AND created_by = ?", siteID, userID).First(&siteCheck).Error; err != nil {
+				c.JSON(http.StatusForbidden, gin.H{"success": false, "error": "无权限操作该站点"})
+				return
+			}
+		}
 	}
 
 	daysInt, err := strconv.Atoi(days)
@@ -2183,6 +2241,7 @@ func HandleReportDailyStats(c *gin.Context) {
 
 // 站点热门事件API
 func HandlePopularEvents(c *gin.Context) {
+	userID, isAdmin, _ := getCurrentUserAndAdmin(c)
 	siteID := c.Query("site_id")
 	days := c.DefaultQuery("days", "7")
 	limit := c.DefaultQuery("limit", "10")
@@ -2191,6 +2250,16 @@ func HandlePopularEvents(c *gin.Context) {
 	if siteID == "" {
 		c.JSON(400, gin.H{"success": false, "message": "缺少site_id参数"})
 		return
+	}
+
+	if !isAdmin {
+		var siteCheck StatSite
+		if StatDB != nil {
+			if err := StatDB.Where("site_id = ? AND created_by = ?", siteID, userID).First(&siteCheck).Error; err != nil {
+				c.JSON(http.StatusForbidden, gin.H{"success": false, "error": "无权限操作该站点"})
+				return
+			}
+		}
 	}
 
 	daysInt, err := strconv.Atoi(days)
@@ -2253,7 +2322,7 @@ func HandlePopularEvents(c *gin.Context) {
 
 // 更新站点信息
 func UpdateSite(c *gin.Context) {
-	userID := c.GetInt64("user_id")
+	userID, isAdmin, _ := getCurrentUserAndAdmin(c)
 	if userID == 0 {
 		authError(c, "未登录")
 		return
@@ -2263,6 +2332,16 @@ func UpdateSite(c *gin.Context) {
 	if siteId == "" {
 		validationError(c, "缺少站点ID")
 		return
+	}
+
+	if !isAdmin {
+		var siteCheck StatSite
+		if StatDB != nil {
+			if err := StatDB.Where("site_id = ? AND created_by = ?", siteId, userID).First(&siteCheck).Error; err != nil {
+				c.JSON(http.StatusForbidden, gin.H{"success": false, "error": "无权限操作该站点"})
+				return
+			}
+		}
 	}
 
 	var updateData struct {
@@ -2368,7 +2447,7 @@ func UpdateSiteSettings(c *gin.Context) {
 
 // 导出站点数据（CSV下载）
 func ExportSiteData(c *gin.Context) {
-	userID := c.GetInt64("user_id")
+	userID, isAdmin, _ := getCurrentUserAndAdmin(c)
 	if userID == 0 {
 		authError(c, "未登录")
 		return
@@ -2378,6 +2457,16 @@ func ExportSiteData(c *gin.Context) {
 	if siteId == "" {
 		validationError(c, "缺少站点ID")
 		return
+	}
+
+	if !isAdmin {
+		var siteCheck StatSite
+		if StatDB != nil {
+			if err := StatDB.Where("site_id = ? AND created_by = ?", siteId, userID).First(&siteCheck).Error; err != nil {
+				c.JSON(http.StatusForbidden, gin.H{"success": false, "error": "无权限操作该站点"})
+				return
+			}
+		}
 	}
 
 	typeStr := c.DefaultQuery("type", "visits")
@@ -2463,7 +2552,7 @@ func ExportSiteData(c *gin.Context) {
 
 // 删除站点数据
 func DeleteSiteData(c *gin.Context) {
-	userID := c.GetInt64("user_id")
+	userID, isAdmin, _ := getCurrentUserAndAdmin(c)
 	if userID == 0 {
 		authError(c, "未登录")
 		return
@@ -2473,6 +2562,16 @@ func DeleteSiteData(c *gin.Context) {
 	if siteId == "" {
 		validationError(c, "缺少站点ID")
 		return
+	}
+
+	if !isAdmin {
+		var siteCheck StatSite
+		if StatDB != nil {
+			if err := StatDB.Where("site_id = ? AND created_by = ?", siteId, userID).First(&siteCheck).Error; err != nil {
+				c.JSON(http.StatusForbidden, gin.H{"success": false, "error": "无权限操作该站点"})
+				return
+			}
+		}
 	}
 
 	var deleteData struct {
@@ -2542,4 +2641,18 @@ func GetPopularCities(c *gin.Context) {
 		"success": true,
 		"data":    cities,
 	})
+}
+
+// 获取当前用户和isAdmin
+func getCurrentUserAndAdmin(c *gin.Context) (userID int64, isAdmin bool, user User) {
+	userID = c.GetInt64("user_id")
+	if userID == 0 {
+		return
+	}
+	if MysqlDB != nil {
+		MysqlDB.Where("id = ?", userID).First(&user)
+		isAdmin = user.Status == 9
+		user.IsAdmin = isAdmin
+	}
+	return
 }
